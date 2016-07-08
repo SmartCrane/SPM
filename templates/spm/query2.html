@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+    ::-ms-clear{ display:none;}
+</style>
+<script type="text/javascript">
+    var querycontentvalue= null;
+    var queryrecordvalue= null;
+    var querycontent1value= null;
+    var queryrecord1value= null;
+    var devalue= null;
+    var spvalue= null;
+    var cavalue= null;
+    var stvalue= null;
+    var envalue= null;
+    {% if userquerytype == 'category' %}var isquery = false;{% else %} var isquery = true;{% endif %}
+    var upHandler = $.fn.combobox.defaults.keyHandler.up;
+    var downHandler = $.fn.combobox.defaults.keyHandler.down;
+    $(document).ready(function(){
+        $('#dlg').dialog('close');
+        $('form#queryform').submit();
+        //获取单位,专业信息
+        $.ajax({
+            url:'/get_filter_data', 
+            type:'get',
+            success:function(data){
+                var deptcombo =[];//单位下拉列表数据
+                var specialtycombo =[];//专业下拉列表数据
+                var categorycombo =[];
+                for(var i=0;i<data.dept.length;i++){
+                    deptcombo.push({"id":data.dept[i].id,"text":data.dept[i].text});
+                }
+                for(var i=0;i<data.speciality.length;i++){
+                    specialtycombo.push({"id":data.speciality[i].id,"text":data.speciality[i].text});
+                }
+                deptcombo.unshift({"id":"", "text":"全部单位"});
+                $("#dept").combobox("select", deptcombo[0].id); //设定单位默认值
+                $("#dept").combobox("loadData", deptcombo);
+                specialtycombo.unshift({"id":"", "text":"全部专业"});
+                $("#specialty").combobox("select", specialtycombo[0].id); //设定专业默认值
+                $("#specialty").combobox("loadData", specialtycombo);
+            }
+        });
+        
+        addSelectEvent("dept", "", "全部单位");
+        addSelectEvent("specialty", "", "全部专业");
+        addunselectevent("dept");
+        addunselectevent("category");
+        //给搜索框绑定改变事件
+        $("#querycontent").combobox({  
+            keyHandler: {
+                up: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){upHandler.call(this)}
+                },
+                down: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){downHandler.call(this)}
+                },
+                enter:function(){
+                    changequeryiframe();
+                    $(this).combobox('hidePanel');
+                },
+                query: function(q,e){
+                    var tt = [q];
+                    if(q.indexOf(';')>=0){
+                        tt = q.split(";");
+                    }
+                    if(q.indexOf('；')>=0){
+                        tt = q.split("；");
+                    }
+                    if(tt[1]){
+                        tt[0] = encodeURI(tt[0]);
+                        tt[1] = encodeURI(tt[1]);
+                        $('#querycontent').combobox('reload','/queryinspdata?spname='+tt[0]+'&spmodel='+tt[1]);
+                        $('#querycontent').combobox('setValue', q);
+                    }else{
+                        tt[0] = encodeURI(tt[0]);
+                        $('#querycontent').combobox('reload','/queryinspdata?spname='+tt[0]);
+                        $('#querycontent').combobox('setValue', q);
+                    }
+                }
+            },
+        });
+        $("#querycontent1").combobox({  
+            keyHandler: {
+                up: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){upHandler.call(this)}
+                },
+                down: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){downHandler.call(this)}
+                },
+                enter:function(){
+                    changefilteriframe();
+                    $(this).combobox('hidePanel');
+                },
+                query: function(q,e){
+                    var tt = [q];
+                    if(q.indexOf(';')>=0){
+                        tt = q.split(";");
+                    }
+                    if(q.indexOf('；')>=0){
+                        tt = q.split("；");
+                    }
+                    if(tt[1]){
+                        tt[0] = encodeURI(tt[0]);
+                        tt[1] = encodeURI(tt[1]);
+                        $('#querycontent1').combobox('reload','/queryinspdata?spname='+tt[0]+'&spmodel='+tt[1]);
+                        $('#querycontent1').combobox('setValue', q);
+                    }else{
+                        tt[0] = encodeURI(tt[0]);
+                        $('#querycontent1').combobox('reload','/queryinspdata?spname='+tt[0]);
+                        $('#querycontent1').combobox('setValue', q);
+                    }
+                }
+            },
+        });
+        $("#queryrecordid").combobox({  
+            keyHandler: {
+                up: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){upHandler.call(this)}
+                },
+                down: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){downHandler.call(this)}
+                },
+                enter:function(){
+                    changefilteriframe();
+                    $(this).combobox('hidePanel');
+                },
+                query: function(q,e){
+                    $('#queryrecordid').combobox('reload','/queryrecorddata?record='+q);
+                    $('#queryrecordid').combobox('setValue', q);
+                }
+            },
+        });
+        $("#queryrecordid1").combobox({  
+            keyHandler: {
+                up: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){upHandler.call(this)}
+                },
+                down: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){downHandler.call(this)}
+                },
+                enter:function(){
+                    changefilteriframe();
+                    $(this).combobox('hidePanel');
+                },
+                query: function(q,e){
+                    $('#queryrecordid1').combobox('reload','/queryrecorddata?record='+q);
+                    $('#queryrecordid1').combobox('setValue', q);
+                }
+            },
+        });
+        //取消所有选项则选择全部
+        function addunselectevent(nodeid){
+            $('#'+nodeid).combobox({
+                onUnselect:function(){
+                    var ids = $(this).combobox('getValues');
+                    if(ids.length==0){
+                        firstid=$(this).combobox("getData")[0].id;
+                        $(this).combobox("select", firstid);
+                    }
+                }
+            });
+        }
+        //取消选择所有专业则选择全部专业
+        $('#specialty').combobox({
+            onUnselect:function(){
+                var ids = $(this).combobox('getValues');
+                if(ids.length==0){
+                    firstid=$("#specialty").combobox("getData")[0].id;
+                    $("#specialty").combobox("select", firstid);
+                }
+                var jsondata = {"sids":ids}
+                $.ajax({
+                    url:'/reload_category', 
+                    type:'post',
+                    data:jsondata,
+                    success:function(data){
+                        $("#category").combobox('clear');
+                        addSelectEvent("category", data[0].id, "全部种类");
+                        $("#category").combobox("select", data[0].id);
+                        $("#category").combobox("loadData", data);
+                    }
+                });
+            }
+        });
+    });
+    //给“全部”选项添加相关事件：当选择非“全部”选项是取消选择“全部”，当选择“全部”时清空其他选项
+    function addSelectEvent(nodeid, id, text){
+        $('#'+nodeid).combobox({
+            onSelect: function(){
+                //当“全部”出现在首位，并且当前选择的id集合长度大于1，说明“全部”和其它选项同时出现
+                if ($(this).combobox('getText').indexOf(text) == 0
+                     && $(this).combobox('getValues').length>1) {
+                    $(this).combobox('unselect', id);  //取消选中“全部”
+                }
+                //选择专业时连动获取种类数据
+                if (nodeid == "specialty") {
+                    var ids = $(this).combobox('getValues');
+                    var jsondata = {"sids":ids}
+                    $.ajax({
+                        url:'/reload_category', 
+                        type:'post',
+                        data:jsondata,
+                        success:function(data){
+                            $("#category").combobox('clear');
+                            addSelectEvent("category", data[0].id, "全部种类");
+                            $("#category").combobox("select", data[0].id);
+                            $("#category").combobox("loadData", data);
+                        }
+                    });
+                }
+                //当选择“全部”时， 清空选中值并显示“全部”
+                if ($(this).combobox('getText').indexOf(text) > 0) { 
+                   $(this).combobox('clear').combobox('select', id);
+                }
+            }
+        });
+    }
+    function getURL(){
+        var queryStr = $("#querycontent").val();
+        if(queryStr.indexOf(" ")!=-1){
+            var array = queryStr.split(" ");
+            console.log("url?name="+array[0]+"&type="+array[1]);
+        } else {
+            console.log("url?name="+queryStr+"&type=");
+        }
+    }
+    function getValue(){
+        alert($("#querycontent").val());
+    }
+    function querydata(){
+        var value = $('#querycontent').combobox('getValue');
+        alert("http://mstr?parameter="+value);
+    }
+    function changequeryiframe(isexp){
+        var value = $('#querycontent').combobox('getValue');
+        var record = $('#queryrecordid').combobox('getValue');
+        if (!isexp) {
+            if(value == querycontentvalue && record == queryrecordvalue){
+                $('#dlg').html('<div style="text-align: center;padding-top: 20px;">查询条件未改变</div>');
+                $('#dlg').dialog('open');
+                return;
+            }else{
+                querycontentvalue = value;
+                queryrecordvalue = record;
+            }
+        }
+        var parms = [];
+        if(value.indexOf(';')>=0){
+            parms = value.split(";");
+        }
+        if(value.indexOf('；')>=0){
+            parms = value.split("；");
+        }
+        
+        var spname = "";
+        var spmodel = "";
+        var startdate = "";
+        var enddate = "";
+        var mindate = "";
+        var recordid = "";
+        var valuePromptAnswers = "{{user.username}}^spname^spmodel^starttime^endtime^recordid";
+        if(value){
+            spname=value;
+        }
+        if(parms.length == 1){
+            spname=parms[0];
+        }
+        if (parms.length > 1){
+            spname=parms[0];
+            spmodel=parms[1];
+        }
+        if(record){
+            recordid =record;
+        }
+        valuePromptAnswers = valuePromptAnswers.replace('spname',spname);
+        valuePromptAnswers = valuePromptAnswers.replace('spmodel',spmodel);
+        valuePromptAnswers = valuePromptAnswers.replace('starttime',startdate);
+        valuePromptAnswers = valuePromptAnswers.replace('endtime',enddate);
+        valuePromptAnswers = valuePromptAnswers.replace('recordid',recordid);
+        $('#queryform').attr('action','{{mstraddr}}');
+        if(isexp){
+            $('#evt').val('{{expevt}}');
+            $('#src').val('{{expsrc}}');
+            $('#queryform').attr('target','hideiframe');
+        }else {
+            $('#evt').val('{{evt}}');
+            $('#src').val('{{src}}');
+            $('#queryform').attr('target','my-iframe');
+        }
+        $('#visMode').val('{{visMode}}');
+        $('#reportViewMode').val('{{reportViewMode}}');
+        $('#reportID').val('{{reportID}}');
+        $('#server').val('{{server}}');
+        $('#Project').val('{{Project}}');
+        $('#port').val('{{port}}');
+        $('#share').val('{{share}}');
+        $('#hiddensections').val('{{hiddensections}}');
+        $('#uid').val('{{uid}}');
+        $('#pwd').val('{{pwd}}');
+        $('#promptAnswerMode').val('{{promptAnswerMode}}');
+        $('#valuePromptAnswers').val(valuePromptAnswers);
+        $('form#queryform').submit();
+    }
+    function changefilteriframe(isexp){
+        var value = $('#querycontent1').combobox('getValue');
+        var record = $('#queryrecordid1').combobox('getValue');
+        var deptvalue = $('#dept').combobox('getValues');
+        var specialtyvalue = $('#specialty').combobox('getValues');
+        var categoryvalue = $('#category').combobox('getValues');
+        var startdatevalue = $('#startdate').combobox('getValue');
+        var enddatevalue = $('#enddate').combobox('getValue');
+        if (!isexp) {
+            if(value == querycontent1value && record == queryrecord1value &&
+                devalue.sort().toString() == deptvalue.sort().toString() && 
+                spvalue.sort().toString() == specialtyvalue.sort().toString() &&
+                cavalue.sort().toString() == categoryvalue.sort().toString() && 
+                stvalue == startdatevalue &&
+                envalue == enddatevalue){
+                    $('#dlg').html('<div style="text-align: center;padding-top: 20px;">查询条件未改变</div>');
+                    $('#dlg').dialog('open');
+                    return;
+            }else{
+                    querycontent1value = value;
+                    queryrecord1value = record;
+                    devalue = deptvalue;
+                    spvalue = specialtyvalue;
+                    cavalue = categoryvalue;
+                    stvalue = startdatevalue;
+                    envalue = enddatevalue;
+            }  
+        }
+        var deptelePrompt = "";
+        var parms = [];
+        if (deptvalue.length>0&&deptvalue[0].length>0){
+            deptelePrompt = "{{depteleid}};";
+            for(var i = 0;i<deptvalue.length;i++){
+                if(i==deptvalue.length-1){
+                    deptelePrompt +="{{depteleid}}:"+deptvalue[i]+","
+                }else{
+                    deptelePrompt +="{{depteleid}}:"+deptvalue[i]+";"
+                }
+                
+            }
+        }
+        var specialtyelePrompt = "";
+        if (specialtyvalue.length>0&&specialtyvalue[0].length>0){
+            specialtyelePrompt = "{{specialtyid}};";
+            for(var i = 0;i<specialtyvalue.length;i++){
+                if(i==specialtyvalue.length-1){
+                    specialtyelePrompt +="{{specialtyid}}:"+specialtyvalue[i]+","
+                }else{
+                    specialtyelePrompt +="{{specialtyid}}:"+specialtyvalue[i]+";"
+                }
+                
+            }
+        }
+        var categoryelePrompt = "";
+        if (categoryvalue.length>0&&categoryvalue[0].length>0){
+            categoryelePrompt = "{{categoryid}};";
+            for(var i = 0;i<categoryvalue.length;i++){
+                if(i==categoryvalue.length-1){
+                    categoryelePrompt +="{{categoryid}}:"+categoryvalue[i]+","
+                }else{
+                    categoryelePrompt +="{{categoryid}}:"+categoryvalue[i]+";"
+                }
+                
+            }
+        }
+        var elementsPromptAnswers = deptelePrompt+specialtyelePrompt+categoryelePrompt;
+        if(value.indexOf(';')>=0){
+            var parms = value.split(";");
+        }
+        if(value.indexOf('；')>=0){
+            var parms = value.split("；");
+        }
+        
+        var spname = "";
+        var spmodel = "";
+        var startdate = "";
+        var enddate = "";
+        var mindate = "";
+        var recordid = "";
+        var valuePromptAnswers = "{{user.username}}^spname^spmodel^starttime^endtime^recordid";
+        if(value){
+            spname = value;
+        }
+        if (parms.length > 1){
+            spname = parms[0];
+            spmodel = parms[1]
+        };
+        if(parms.length == 1){
+            spname = parms[0];
+        }
+        if(startdatevalue){
+            startdate = startdatevalue;
+        }
+        if(enddatevalue){
+            enddate = enddatevalue;
+        }
+        if(record){
+            recordid = record;
+        }
+        valuePromptAnswers = valuePromptAnswers.replace('spname',spname);
+        valuePromptAnswers = valuePromptAnswers.replace('spmodel',spmodel);
+        valuePromptAnswers = valuePromptAnswers.replace('starttime',startdate);
+        valuePromptAnswers = valuePromptAnswers.replace('endtime',enddate);
+        valuePromptAnswers = valuePromptAnswers.replace('recordid',recordid);
+        $('#queryform').attr('action','{{mstraddr}}');
+         if(isexp){
+            $('#evt').val('{{expevt}}');
+            $('#src').val('{{expsrc}}');
+            $('#queryform').attr('target','hideiframe');
+        }else{
+            $('#evt').val('{{evt}}');
+            $('#src').val('{{src}}');
+            $('#queryform').attr('target','my-iframe');
+        }
+        $('#visMode').val('{{visMode}}');
+        $('#reportViewMode').val('{{reportViewMode}}');
+        $('#reportID').val('{{reportID}}');
+        $('#server').val('{{server}}');
+        $('#Project').val('{{Project}}');
+        $('#port').val('{{port}}');
+        $('#share').val('{{share}}');
+        $('#hiddensections').val('{{hiddensections}}');
+        $('#uid').val('{{uid}}');
+        $('#pwd').val('{{pwd}}');
+        $('#promptAnswerMode').val('{{promptAnswerMode}}');
+        $('#valuePromptAnswers').val(valuePromptAnswers);
+        $('#elementsPromptAnswers').val(elementsPromptAnswers);
+        $('form#queryform').submit();
+    }
+    //更换查询和筛选功能
+    function changequery(){
+        if(isquery){
+            $('#filterpanel').panel('expand',true);
+            isquery = false;
+        }else{
+            $('#filterpanel').panel('collapse',true);
+            isquery = true;
+        }
+    }
+    function listexport(buttonid){
+        if(buttonid == 'query'){
+            console.log('query');
+        }else{
+            console.log('filter');
+        }
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'">
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="top1" region="north" border="false" style="height:60px;overflow:hidden;line-height: 60px;">
+                <!-- 左侧查询div -->
+                <div style="float:left;width:100%;line-height: 30px;">
+                    <!-- 筛选div -->
+                    <div id="filterpanel" class="easyui-panel" title="My Panel" style="overflow: auto;"
+                        data-options="iconCls:'icon-save',closable:true,noheader:true,
+                        openAnimation:'slide',closeAnimation:'slide',collapsible:true,{% if userquerytype == 'category' %}collapsed:false,{% else %} collapsed:true,{% endif %}
+                        minimizable:true,maximizable:true,border:false,doSize:false,fit:false">
+                        <div style="float:left;width:100%">
+                            <label for="dept" style="margin: 0 5px;">单位</label>
+                            <input id="dept" class="easyui-combobox" name="dept" value="" 
+                            data-options="valueField:'id',textField:'text',multiple:true,panelHeight:'auto',width: '150px'"/>
+                            <label for="specialty" style="margin-right: 5px;">专业</label>
+                            <input id="specialty" class="easyui-combobox" name="specialty" 
+                            data-options="valueField:'id',textField:'text',multiple:true,panelHeight:'auto',width: '150px'"/>
+                            <label for="category" style="margin-right: 5px;">种类</label>
+                            <input id="category" class="easyui-combobox" name="category" 
+                            data-options="valueField:'id',textField:'text',multiple:true,panelHeight:'auto',width: '150px'"/>
+                             <label for="startdate" style="margin-right: 5px;">开始日期</label>
+                            <input id="startdate" name="startdate" class="easyui-datebox" style="width:150px" data-options="editable: false">
+                            <label for="enddate" style="margin-right: 5px;">结束日期</label>
+                            <input class="easyui-datebox" id="enddate" name="enddate" method="get" style="width: 150px" 
+                            data-options="editable: false" />
+                            <div style="float:right;height: 26px;line-height: 36px;padding-top: 
+                            3px;cursor:pointer;" onclick="changequery()">
+                                <img id="changequeryimg2" src="{{STATIC_URL}}images/up1.png" width="20px" style="">
+                            </div>
+                            <br/><hr style="margin:0;  margin-bottom: -3px; margin-top: 2px;"/>
+                            <label for="recordid" style="margin: 0 5px;">入库单号查询</label>
+                            <input class="easyui-combobox" id="queryrecordid1" name="queryrecordid1" style="width: 288px"
+                            data-options="valueField:'text',textField:'text',prompt:'A-WF-2015-06-03-00001'" method="get">
+                            <label for="dname" style="margin: 0 5px;">备品备件查询</label>
+                            <input class="easyui-combobox" id="querycontent1" name="querycontent1" style="width: 288px"
+                            data-options="valueField:'text',textField:'text',prompt:'名称;型号'" method="get">
+                            <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 24px;float: right; margin-top: 4px;" onclick="changefilteriframe();">查询</a>
+                            <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 24px;float: right;margin-top: 4px;" onclick="changefilteriframe('true');">导出</a>
+                        </div>
+                    </div>
+                    <!-- 查询div -->
+                    <div id = "querydiv" style="line-height: 60px;">
+                        <label for="recordid" style="margin: 0 5px;">入库单号查询</label>
+                        <input class="easyui-combobox" id="queryrecordid" name="queryrecordid" style="width: 288px"
+                        data-options="valueField:'text',textField:'text',prompt:'A-WF-2015-06-03-00001'" method="get">
+                        <label for="querycontent" style="margin: 0 5px;">备品备件查询</label>
+                        <input class="easyui-combobox" id="querycontent" name="querycontent" style="width: 300px"
+                        data-options="valueField:'text',textField:'text',prompt:'名称;型号'" method="get">
+                        <form style="display:none" id="queryform" action="{{mstraddr}}" target="my-iframe" method="post">
+                            <input type="text" name="evt" id="evt" value="{{evt}}">
+                            <input type="text" name="src" id="src" value="{{src}}">
+                            <input type="text" name="visMode" id="visMode" value="{{visMode}}">
+                            <input type="text" name="reportViewMode" id="reportViewMode" value="{{reportViewMode}}">
+                            <input type="text" name="reportID" id="reportID" value="{{reportID}}">
+                            <input type="text" name="server" id="server" value="{{server}}">
+                            <input type="text" name="Project" id="Project" value="{{Project}}">
+                            <input type="text" name="port" id="port" value="{{port}}">
+                            <input type="text" name="share" id="share" value="{{share}}">
+                            <input type="text" name="hiddensections" id="hiddensections" value="{{hiddensections}}">
+                            <input type="text" name="uid" id="uid" value="{{uid}}">
+                            <input type="text" name="pwd" id="pwd" value="{{pwd}}">
+                            <input type="text" name="promptAnswerMode" id="promptAnswerMode" value="{{promptAnswerMode}}">
+                            <input type="text" name="valuePromptAnswers" id="valuePromptAnswers" value="{{user.username}}">
+                            <input type="text" name="elementsPromptAnswers" id="elementsPromptAnswers">
+                            <!-- <input type="text" name="reportID" id="reportID" value="071C2F6D4ADBD15D2DEA0E9680B04554">
+                            <input type="text" name="reportViewMode" id="reportViewMode" value="1"> -->
+                        </form>
+                        <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                        width: 60px;height: 23px;" onclick="changequeryiframe('true');">导出</a>
+                        <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                        width: 60px;height: 23px;" onclick="changequeryiframe();">查询</a>
+                        <!-- 切换查询模式按钮 -->
+                        <div style="float:right;height: 26px;line-height: 20px;padding-top: 3px;cursor:pointer;" onclick="changequery()">
+                            <img id="changequeryimg1" src="{{STATIC_URL}}images/down1.png" width="20px" style="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="centerdiv" region="center" style="text-align: center; overflow: hidden;">
+                <div id="dlg" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'',
+                    handler:function(){
+                        $('#dlg').dialog('close');
+                    }
+                }]" style="width:200px;height:150px;padding:10px">
+                </div>
+                <iframe id="mainiframe" name="my-iframe" width="100%" height="100%" frameborder="0">
+                </iframe>
+                <iframe id="hideiframe" name="hideiframe" width="0%" height="0%" frameborder="0">
+                </iframe>
+            </div>
+        </div>
+    </div>
+{% endblock %}

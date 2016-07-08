@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style type="text/css">
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+    ::-ms-clear{ display:none;}
+</style>
+<script type="text/javascript">
+    var queryrecordvalue = null;
+    var upHandler = $.fn.combobox.defaults.keyHandler.up;
+    var downHandler = $.fn.combobox.defaults.keyHandler.down;
+    $(document).ready(function(){
+        $('#dlg').dialog('close');
+        $('form#queryform').submit();
+        $("#queryrecordid").combobox({  
+            keyHandler: {
+                up: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){upHandler.call(this)}
+                },
+                down: function(){
+                    var opts = $(this).combobox('options');
+                    if (opts.editable){downHandler.call(this)}
+                },
+                enter:function(){
+                    changequeryiframe();
+                    $(this).combobox('hidePanel');
+                },
+                query: function(q,e){
+                    $('#queryrecordid').combobox('reload','/queryrecorddata?record='+q);
+                    $('#queryrecordid').combobox('setValue', q);
+                }
+            },
+        }); 
+    });
+    function changequeryiframe(isexp){
+        var record = $('#queryrecordid').combobox('getValue');
+        if(record == queryrecordvalue){
+            $('#dlg').html('<div style="text-align: center;padding-top: 20px;">查询条件未改变</div>');
+            $('#dlg').dialog('open');
+            return;
+        }else{
+            queryrecordvalue = record;
+        }
+        var recordid = "";
+        var valuePromptAnswers = "{{user.username}}^^^^^recordid";
+        if(record){
+            recordid =record;
+        }
+        valuePromptAnswers = valuePromptAnswers.replace('recordid',recordid);
+        $('#queryform').attr('action','{{mstraddr}}');
+        $('#evt').val('{{evt}}');
+        $('#src').val('{{src}}');
+        $('#visMode').val('{{visMode}}');
+        $('#currentViewMedia').val('{{currentViewMedia}}');
+        $('#documentID').val('{{documentID}}');
+        $('#server').val('{{server}}');
+        $('#Project').val('{{Project}}');
+        $('#port').val('{{port}}');
+        $('#share').val('{{share}}');
+        $('#hiddensections').val('{{hiddensections}}');
+        $('#uid').val('{{uid}}');
+        $('#pwd').val('{{pwd}}');
+        $('#promptAnswerMode').val('{{promptAnswerMode}}');
+        $('#valuePromptAnswers').val(valuePromptAnswers);
+        $('form#queryform').submit();
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'">
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="top1" region="north" border="true" style="height:60px;overflow:hidden;line-height: 60px;">
+                <!-- 查询div -->
+                <div style="float:left;width:100%;line-height: 30px;">
+                    <div id = "querydiv" style="line-height: 60px;">
+                        <label for="recordid" style="margin: 0 5px;">入库单号查询</label>
+                        <input class="easyui-combobox" id="queryrecordid" name="queryrecordid" style="width: 288px"
+                        data-options="valueField:'text',textField:'text',prompt:'A-WF-2015-06-03-00001'" method="get">
+                        <form style="display:none" id="queryform" action="{{mstraddr}}" target="my-iframe" method="post">
+                            <input type="text" name="evt" id="evt" value="{{evt}}">
+                            <input type="text" name="src" id="src" value="http://www.baidu.com">
+                            <input type="text" name="visMode" id="visMode" value="{{visMode}}">
+                            <input type="text" name="currentViewMedia" id="currentViewMedia" value="{{currentViewMedia}}">
+                            <input type="text" name="documentID" id="documentID" value="{{documentID}}">
+                            <input type="text" name="server" id="server" value="{{server}}">
+                            <input type="text" name="Project" id="Project" value="{{Project}}">
+                            <input type="text" name="port" id="port" value="{{port}}">
+                            <input type="text" name="share" id="share" value="{{share}}">
+                            <input type="text" name="hiddensections" id="hiddensections" value="{{hiddensections}}">
+                            <input type="text" name="uid" id="uid" value="{{uid}}">
+                            <input type="text" name="pwd" id="pwd" value="{{pwd}}">
+                            <input type="text" name="promptAnswerMode" id="promptAnswerMode" value="{{promptAnswerMode}}">
+                            <input type="text" name="valuePromptAnswers" id="valuePromptAnswers" value="{{user.username}}">
+                            <input type="text" name="elementsPromptAnswers" id="elementsPromptAnswers">
+                        </form>
+                        <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                        width: 60px;height: 23px;" onclick="changequeryiframe();">查询</a>
+                    </div>
+                </div>
+            </div>
+            <div id="centerdiv" region="center" style="text-align: center; overflow: hidden;">
+                <div id="dlg" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'',
+                    handler:function(){
+                        $('#dlg').dialog('close');
+                    }
+                }]" style="width:200px;height:150px;padding:10px">
+                </div>
+                <iframe id="mainiframe" name="my-iframe" width="100%" height="100%" frameborder="0">
+                </iframe>
+            </div>
+        </div>
+    </div>
+{% endblock %}

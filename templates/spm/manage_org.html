@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+</style>
+<script type="text/javascript" src="{{STATIC_URL}}js/datagrid-filter.js"></script>
+<script type="text/javascript">
+
+
+    var isOpen=false;
+        //编辑单元格的方法
+    var parentorg="";
+    //记录所选单位信息
+    $.extend($.fn.datagrid.methods, {
+            editCell: function(jq,param){
+                return jq.each(function(){
+                    var opts = $(this).datagrid('options');
+                    var fields = $(this).datagrid('getColumnFields',true).concat($(this).datagrid('getColumnFields'));
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor1 = col.editor;
+                        if (fields[i] != param.field){
+                            col.editor = null;
+                        }
+                    }
+                    $(this).datagrid('beginEdit', param.index);
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor = col.editor1;
+                    }
+                    $(this).blur();
+                });
+            }
+        });
+        
+        function validata_org_dic(index){
+            var ed1 = $('#datagrid_syn_org').datagrid('getEditor', {index:index,field:'org_dic'});
+            if($(ed1.target).val() === ""&& $(ed1.target).val() != null){
+                return true;
+            }
+            else {
+                if (!$("#datagrid_syn_org").datagrid("validateRow",index)) {
+                    return false;
+                } else {
+                    return true;
+                }
+        }
+        }
+        //判断所选数据是否有数据
+        function isHasWrite(){
+            var isHasWrite=false;
+            var checkRows=$('#datagrid_syn_org').datagrid('getChecked');
+            console.log(checkRows); 
+            for (var i=0;i<checkRows.length;i++){
+                var org_dic=checkRows[i].org_dic;
+                //alert(org_dic);
+                var longitude=checkRows[i].longitude;
+                var latitude=checkRows[i].latitude;
+                //if(org_dic!=""&& org_dic!=null && longitude!=""&& longitude!=null && latitude!=""&& latitude!=null  )
+                if(org_dic!=""&& org_dic!=null  )
+                {
+                isHasWrite=true;
+                break;
+                }
+                
+            }
+            return isHasWrite;
+        }
+        var editIndex = undefined;
+        function endEditing(){
+            if (editIndex == undefined){return true}
+            if(validata_org_dic(editIndex)){
+            $('#datagrid_syn_org').datagrid('endEdit', editIndex);
+                $('#datagrid_syn_org').datagrid('cancelEdit', editIndex);
+                editIndex = undefined;
+                return true;
+            
+            } else {
+                return false;
+            }
+            
+       }
+        function onClickCell(index, field){//只有数量可以编辑
+            if(editIndex!=index){
+                if (endEditing()){
+                   // $('#datagrid_syn_org').datagrid('editCell', {index:index,field:"org_dic"});
+                
+                    //org_dic不能为空
+                    //$('#datagrid_syn_org').datagrid('selectRow',index);
+                    $('#datagrid_syn_org').datagrid('beginEdit',index);
+                    editIndex = index;
+                      
+                    }
+            }
+            else{
+                $('#datagrid_syn_org').datagrid('beginEdit', index);
+        }
+        }
+        
+        function getNow(status){//获取当前时间点
+            var time = "";
+            var nowdate = new Date();
+            if (status == "date"){
+                var year = nowdate.getFullYear();
+                var month = nowdate.getMonth+1;
+                var day = nowdate.getDate();
+                time = day + "/" + month + "/" + year;
+            } else {
+                var hour = nowdate.getHours();
+                var minute = nowdate.getMinutes(); 
+                var seconds = nowdate.getSeconds(); 
+                time = hour + ":" + minute + ":" + seconds;
+            }
+            return time;
+        }  
+    $(document).ready(function(){
+        $('#dlg').dialog('close');
+        $('#dlg_syn_org').dialog('close');
+        $('#alertdlg').dialog('close');
+        //给入库日期和时间赋予当前值
+        var nowdate = getNow("date");
+        var nowtime = getNow("time");
+        $('#date').datebox('setValue', nowdate);
+        $('#time').timespinner('setValue', nowtime);
+        $('#dg').datagrid({
+            url: "/get_org_data",
+            method: "get",
+            showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:true,
+            pageList:[10,15,20,50,100],
+            pageSize: 20,            
+            nowrap: true,
+            checkOnSelect: true,
+            onClickCell: function(index,field,value){
+                onClickCell(index,field);
+            },
+            
+            columns:[[
+                {field:'check',width:50,align:'center',checkbox: true},
+                {field:'orgname',title:'单位名称',width:100,align:'center'},
+                 {field:'org_dic',title:'单位简称',width:100,align:'center'},
+                {field:'org_order',title:'排序字段',width:100,align:'center'},
+                //{field:'orgcode',title:'orgcode',width:100,align:'center',visiable:'false'},
+               /* {field:'unit',title:'单位',width:100,align:'center'},
+                {field:'amount',title:'数量',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'checkPrice'
+                    }
+                }},
+                {field:'spvalue',title:'单价',width:100,align:'center'},
+                {field:'totalvalue',title:'总额',width:100,align:'center'}*/
+            ]]
+        });
+        //添加过滤
+       
+      
+    }); 
+    
+   
+    
+    
+    var dataarrayorgs;
+    //权限管理
+    function outsubmit(){
+        //$("#dg").datagrid('endEdit', editIndex);//结束编辑，保存数据
+        var dataarray = $("#dg").datagrid("getChecked");
+        if (dataarray.length>=2)
+        {
+            $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">所选单位只能为一!</div>');
+            $('#alertdlg').dialog('open');
+            //alert('所选单位只能为一');
+            return;
+        }
+        else{
+       
+        
+        if (dataarray.length == 0) {//没有选择出库信息
+            //alert('请选择单位');
+            $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">请选择单位</div>');
+            $('#alertdlg').dialog('open');
+            } else {
+            
+            
+            $('#dlg').dialog({
+                onClose:function(){
+                $("#showdg").datagrid('reload');
+               // alert("Close");
+               
+                }        
+             });
+             $('#dlg').dialog('open');
+            
+            $("#orgchecked").textbox('setValue',dataarray[0]['orgname']);
+            parentorg=dataarray[0]['orgcode']
+            /*dataJSON = {"rows":""};
+            //所有单位信息
+             datarows = $("#dg").datagrid("getRows");
+             var datarows_del=[];
+             for(i=0;i<datarows.length;i++)
+            {
+                if(datarows[i]['orgname']!=dataarray[0]['orgname']){
+                    datarows_del.push(datarows[i]);
+                }
+            }
+             
+            dataJSON.rows =  datarows_del;
+            //显示单位中不包括当前权限分配单位
+            
+            dataJSON.total=datarows_del.length;*/
+            
+                       
+            $("#showdg").datagrid({
+            
+                //data: dataJSON,
+            url:"/get_org_data?parentorg="+parentorg,
+            showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:false,
+            pageSize: 20,
+            nowrap: true,
+            resizable : true,
+            method:'get',
+            columns:[[
+                {field:'check',width:50,align:'center',checkbox: true},                    
+                {field:'orgname',title:'可见单位',width:100,align:'center'},
+                //{field:'isSelect',title:'可见',width:100,align:'center'},  
+                ]],
+            onLoadSuccess:function(data){
+                var rows=$("#showdg").datagrid("getRows");
+            for(i=0;i<rows.length;i++)
+            {
+            var selected=rows[i]['isSelect'];
+            if(selected){
+                $('#showdg').datagrid('selectRow',i);
+            }
+            
+        }
+            }
+            }); 
+        }       
+        }
+        
+    }
+    
+    
+        
+    function outsubmitorg(){
+        //$("#dg").datagrid('endEdit', editIndex);//结束编辑，保存数据
+        //var dataarray = $("#dg").datagrid("getChecked");
+        //('#dlg_syn_org').dialog('open');
+       
+        
+        
+        if(!isOpen){
+        isOpen=true;
+        
+        
+        $('#dlg_syn_org').dialog('open'); 
+        $('#dlg_syn_org').dialog({
+                onClose:function(){
+                //alert("Close");
+                $('#datagrid_syn_org').datagrid('reload');
+                }        
+             });
+        $('#datagrid_syn_org').datagrid({
+            url: "/get_org_data_more",
+            showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:false,
+            pageSize: 20,
+            nowrap: true,
+            resizable : true,
+            method:"get",
+            //checkOnSelect:false,
+            //selectOnCheck:false,
+            onClickCell: function(index,field,value){
+                onClickCell(index,field);
+            },
+            /*onEndEdit: function(index, row, changes){
+                if(changes.org_dic){
+                    $('#dlg_syn_org').datagrid('updateRow',{
+                        index: index,
+                        row: {
+                            totalvalue: changes.amount*row.spvalue
+                        }
+                    });
+                }
+            },*/
+             columns:[[
+                {field:'check',width:50,align:'center',checkbox: true},
+                {field:'orgname',title:'单位名称',width:160,align:'center'},
+                
+               
+                {field:'org_dic',title:'<font style="color: red;">*</font>简称',width:80,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            required: true,
+                            //validType:'checkPrice',
+                            validType:'checkOrgdic',
+                           // missingMessage:"配件数量,例如:4"
+                            missingMessage:"单位简称，2-4位大写字母组成，如：WF"
+                        }
+                    }},
+                {field:'longitude',title:'经度',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'maxLength[50]',
+                    }
+                }},
+                {field:'latitude',title:'纬度',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'maxLength[50]',
+                    }
+                }},
+               /* {field:'spmodel',title:'配件型号',width:100,align:'center'},
+                {field:'unit',title:'单位',width:100,align:'center'},
+                {field:'amount',title:'数量',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'checkPrice'
+                    }
+                }},
+                {field:'spvalue',title:'单价',width:100,align:'center'},
+                {field:'totalvalue',title:'总额',width:100,align:'center'}*/
+            ]]
+        });    
+         //添加过滤             
+        $('#datagrid_syn_org').datagrid('enableFilter');
+        
+       /* var p= $('#datagrid_syn_org').datagrid('getPager');   
+        $(p).pagination(
+        {
+            pageSize:20,
+            pageList:[10,15,20,30,40]
+        }
+        );*/
+            
+       }else{
+           $('#dlg_syn_org').dialog('open'); 
+       } 
+        
+    }
+    function submit() {
+    //更新数据库-权限管理
+        dataJSON={"rows":""};
+        var dataarrayorgs=$("#showdg").datagrid("getChecked");
+        dataJSON.rows=dataarrayorgs;
+        var data_str = JSON.stringify(dataarrayorgs);
+        $.ajax({
+            url:'/out_org',
+            showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:false,
+            pageSize: 10,
+            nowrap: true,
+            type:"post",
+            
+            data:{data: data_str,parentorg:$("#orgchecked").textbox('getValue')},
+            
+            success:function(data){
+                if(data == 'ok'){
+                $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">权限操作成功!</div>');
+                $('#alertdlg').dialog('open');
+                    //alert('权限操作成功');
+                    location.reload();
+                }
+            },
+            error:function(a){
+                alert('权限操作失败：'+a.responseText);
+                $("#showdg").datagrid("beginEdit",editIndex);
+            }
+        });
+    }
+    
+    function submitorg() {
+    //往外传的数据-新增单位信息
+    $("#datagrid_syn_org").datagrid('endEdit', editIndex);//结束编辑，保存数据
+    var isHasData1=isHasWrite();
+    
+    if (!isHasData1 || !$("#datagrid_syn_org").datagrid("validateRow",editIndex)) {
+            var err_index = editIndex+1;
+           // $('#dlg').dialog('open');
+            // $('#dlg').html('<div style="text-align: center;padding-top: 20px;">第' + err_index + '行数据信息输入有误</div>');
+             alert('第' + err_index + '行数据信息输入有误');
+            return;
+        }
+        else{
+        //alert("sksksksk");
+        
+        dataJSON={"rows":""};
+        var dataarrayorgs=$("#datagrid_syn_org").datagrid("getChecked");
+        //alert(dataarrayorgs[0].org_dic);
+        //alert(dataarrayorgs[0].parentorgid);
+        
+        dataJSON.rows=dataarrayorgs;
+       // var dicrows=$("#datagrid_syn_org").datagrid("getChecked");
+       // alert(dicrows[0].org_dic);
+        //var dicrow=[];
+        //for (i=0;i<dicrows.length;i++){
+            //dicrows[i].org_dic=trimSpace(dicrows[i].org_dic);
+           // dicrows.push(dicrows[i].org_dic);
+        //}
+        var data_str = JSON.stringify(dataarrayorgs);
+        //alert(data_str);
+       // var org_dic=JSON.stringify(datarow);
+        $.ajax({
+            url:'/out_org_common',
+            data:{data: data_str},
+            type:'post',
+            success:function(data){
+                if(data == 'ok'){
+                 $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">添加单位成功!</div>');
+                $('#alertdlg').dialog('open');
+                    //alert('添加单位成功');
+                    location.reload();
+                }
+            },
+            error:function(a){
+             $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">添加单位失败：+a.responseText</div>');
+                $('#alertdlg').dialog('open');
+                //alert('添加单位失败：'+a.responseText);
+                $("#datagrid_syn_org").datagrid("beginEdit",editIndex);
+            }
+        });
+        }
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'" style="overflow: hidden;">
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="savetop" data-options="region:'north'" border="false" style="height: 40px;overflow: hidden;">
+                <div style="margin-top: 10px;">
+                   
+                    <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 23px;float: left;margin-left: 5px; " onclick="outsubmitorg();">添加单位</a>
+                    <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 23px;float: right;margin-right: 5px; " onclick="outsubmit();">权限管理</a>
+                </div>
+            </div>
+            <div id="savecontent" data-options="region:'center',border: false" style="overflow-x: hidden;">
+                <div id="dg" style="width:100%;height: 100%;" >
+                </div>
+            </div>
+        </div>
+        <div id="dlg" class="easyui-dialog" title="权限管理" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'icon-ok',
+                    handler:function(){
+                        submit();
+                    }
+                },{
+                    text:'取消',
+                    handler:function(){
+                        $('#dlg').dialog('close');
+                    }
+                }]" style="width:700px;height:600px;padding:10px">
+           
+            <div style="height: 30px;margin-top: 10px;line-height: 20px;">
+                <label for="operuser" style="margin: 5px 3px 0 0;">单位:</label>
+                <input class="easyui-textbox" id="orgchecked" name="orgchecked" style="width: 150px"
+                            data-options="disabled: true ,prompt:''" value="">
+             
+            </div>
+            <div id="showdg" style="height: 92%;"></div>
+        </div>
+        <div id="dlg_syn_org" class="easyui-dialog" title="单位同步" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'icon-ok',
+                    handler:function(){
+                        submitorg();
+                    }
+                },{
+                    text:'取消',
+                    handler:function(){
+                    
+                        $('#dlg_syn_org').dialog('close');
+                    }
+                }]" style="width:700px;height:600px;padding:10px">
+           
+            
+            <div id="alertdlg" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'',
+                    handler:function(){
+                        $('#alertdlg').dialog('close');
+                    }
+                }]" style="width:200px;height:150px;padding:10px">
+                </div>
+            <div id="datagrid_syn_org" style="height: 100%;"></div>
+        </div>
+    </div>
+{% endblock %}

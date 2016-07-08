@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+</style>
+<script type="text/javascript" src="{{STATIC_URL}}js/datagrid-filter.js"></script>
+<script type="text/javascript">
+        //编辑单元格的方法
+    $.extend($.fn.datagrid.methods, {
+            editCell: function(jq,param){
+                return jq.each(function(){
+                    var opts = $(this).datagrid('options');
+                    var fields = $(this).datagrid('getColumnFields',true).concat($(this).datagrid('getColumnFields'));
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor1 = col.editor;
+                        if (fields[i] != param.field){
+                            col.editor = null;
+                        }
+                    }
+                    $(this).datagrid('beginEdit', param.index);
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor = col.editor1;
+                    }
+                    $(this).blur();
+                });
+            }
+        });
+        
+        var editIndex = undefined;
+        function endEditing(){
+            if (editIndex == undefined){return true}
+            if ($('#dg').datagrid('validateRow', editIndex)){
+                $('#dg').datagrid('endEdit', editIndex);
+                editIndex = undefined;
+                return true;
+            } else {
+                return false;
+            }
+        }
+        function onClickCell(index, field){//只有数量可以编辑
+            if (endEditing()){
+                $('#dg').datagrid('editCell', {index:index,field:"amount"});
+                editIndex = index;
+            }
+        }
+        function getNow(status){//获取当前时间点
+            var time = "";
+            var nowdate = new Date();
+            if (status == "date"){
+                var year = nowdate.getFullYear();
+                var month = nowdate.getMonth+1;
+                var day = nowdate.getDate();
+                time = day + "/" + month + "/" + year;
+            } else {
+                var hour = nowdate.getHours();
+                var minute = nowdate.getMinutes(); 
+                var seconds = nowdate.getSeconds(); 
+                time = hour + ":" + minute + ":" + seconds;
+            }
+            return time;
+        }  
+    $(document).ready(function(){
+        $('#dlg').dialog('close');
+        //给入库日期和时间赋予当前值
+        var nowdate = getNow("date");
+        var nowtime = getNow("time");
+        $('#date').datebox('setValue', nowdate);
+        $('#time').timespinner('setValue', nowtime);
+        $('#dg').datagrid({
+            url: "/get_sp_data",
+            method: "get",
+            showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            pageSize: 20,
+            nowrap: true,
+            onClickCell: function(index,field,value){
+                onClickCell(index,field);
+            },
+            onEndEdit: function(index, row, changes){
+                if(changes.amount){
+                    $('#dg').datagrid('updateRow',{
+                        index: index,
+                        row: {
+                            totalvalue: changes.amount*row.spvalue
+                        }
+                    });
+                }
+            },
+            columns:[[
+                {field:'check',width:50,align:'center',checkbox: true},
+                {field:'spencode',title:'配件编号',width:100,align:'center'},
+                {field:'spname',title:'配件名称',width:100,align:'center'},
+                {field:'spmodel',title:'配件型号',width:100,align:'center'},
+                {field:'unit',title:'单位',width:100,align:'center'},
+                {field:'amount',title:'数量',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'checkPrice'
+                    }
+                }},
+                {field:'spvalue',title:'单价',width:100,align:'center'},
+                {field:'totalvalue',title:'总额',width:100,align:'center'}
+            ]]
+        });
+        //添加过滤
+        $('#dg').datagrid('enableFilter',[{
+                field:'amount',
+                type:'numberbox',
+                op:['equal','notequal','less','greater']
+            },
+            {
+                field:'spvalue',
+                type:'numberbox',
+                options:{precision:2},
+                op:['equal','notequal','less','greater']
+            }]); 
+    }); 
+    var dataArray;
+    //出库信息的提交
+    function outsubmit(){
+        $("#dg").datagrid('endEdit', editIndex);//结束编辑，保存数据
+        var dataarray = $("#dg").datagrid("getChecked");
+        for (var i=0;i<dataarray.length;i++) {
+            var index = $("#dg").datagrid("getRowIndex", dataarray[i]);
+            if (!$("#dg").datagrid("validateRow",index)) {
+                var err_index = index+1;
+                alert('第'+err_index+'行数据数量不是整数');
+                return;
+            }
+        }
+        if (dataarray.length == 0) {//没有选择出库信息
+            alert('请选择出库信息');
+        } else {
+            $('#dlg').dialog('open');
+            dataJSON = {"rows":""};
+            //选中的出库信息数据
+            var dataarray = $("#dg").datagrid("getChecked");
+            dataJSON.rows =  dataarray;
+            dataArray = dataarray;
+            $("#showdg").datagrid({
+                data: dataJSON,
+                rownumbers: true,
+                singleSelect: true,
+                fitColumns: true,
+                nowrap: true,
+                columns:[[
+                    {field:'spencode',title:'配件编号',width:100,align:'center'},
+                    {field:'spname',title:'配件名称',width:100,align:'center'},
+                    {field:'spmodel',title:'配件型号',width:100,align:'center'},
+                    {field:'unit',title:'单位',width:100,align:'center'},
+                    {field:'amount',title:'数量',width:100,align:'center'},
+                    {field:'spvalue',title:'单价',width:100,align:'center'},
+                    {field:'totalvalue',title:'总额',width:100,align:'center'}
+                ]]
+            });
+        }
+    }
+    function submit() {
+        var data_str = JSON.stringify(dataArray);
+        $.ajax({
+            url:'/out_database',
+            data:{data: data_str, spnum: $("#spnum").val(),
+                operuser: $("#operuser").val(),
+                date: $('#date').datebox('getValue'),
+                time: $('#time').timespinner('getValue'),
+                pickingman:$("#pickingman").val(),
+                direction:$("#direction").val(),
+                remark:$("#remark").val()},
+            type:'post',
+            success:function(data){
+                if(data == 'ok'){
+                    alert('出库成功');
+                    location.reload();
+                }
+            },
+            error:function(a){
+                alert('出库失败：'+a.responseText);
+                $("#dg").datagrid("beginEdit",editIndex);
+            }
+        });
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'" style="overflow: hidden;">
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="savetop" data-options="region:'north'" border="false" style="height: 40px;overflow: hidden;">
+                <div style="margin-top: 10px;">
+                    <label for="spnum" style="margin: -5px 3px 0 5px;">出库单号:</label>
+                    <input class="easyui-textbox" id="spnum" name="spnum" style="width: 150px"
+                            data-options="disabled: true" value="{{recordid}}">
+                    <label for="operuser" style="margin: -5px 3px 0 0;">操作人:</label>
+                    <input class="easyui-textbox" id="operuser" name="operuser" style="width: 150px"
+                            data-options="disabled: true,prompt:''" value="{{user.username}}">
+                    <label for="date" style="margin: -5px 3px 0 0;">出库日期:</label>
+                    <input class="easyui-datebox" id="date" name="date" style="width: 150px"
+                            data-options="editable: false" value="">
+                    <label for="time" style="margin: -5px 3px 0 0;">出库时间:</label>
+                    <input class="easyui-timespinner" id="time" name="time" style="width: 150px"
+                            data-options="showSeconds:true" value="">
+                    <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 23px;float: right;margin-right: 5px; " onclick="outsubmit();">出库</a>
+                </div>
+            </div>
+            <div id="savecontent" data-options="region:'center',border: false" style="overflow-x: hidden;">
+                <div id="dg" style="width:100%;height: 100%;" >
+                </div>
+            </div>
+        </div>
+        <div id="dlg" class="easyui-dialog" title="出库确认" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'icon-ok',
+                    handler:function(){
+                        submit();
+                    }
+                },{
+                    text:'取消',
+                    handler:function(){
+                        $('#dlg').dialog('close');
+                    }
+                }]" style="width:700px;height:600px;padding:10px">
+            <div id="showdg" style="height: 350px;"></div>
+            <div style="height: 90px;margin-top: 10px;line-height: 30px;">
+                <table width="100%">
+                    <tr>
+                        <td>
+                            <label for="pickingman">领料人:</label>
+                        </td>
+                        <td>
+                            <input class="easyui-textbox" id="pickingman" name="pickingman" style="width: 170px"
+                                data-options="prompt:''" value="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <label for="direction">备件去向:</label>
+                        </td>
+                        <td style="width: 80%;">
+                            <input class="easyui-textbox" id="direction" name="direction" style="width: 100%"
+                                data-options="prompt:''" value="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td width="13%">
+                            <label for="remark">备注:</label>
+                        </td>
+                        <td style="height: 70px;">
+                            <input class="easyui-textbox" id="remark" name="remark" style="width: 100%;height: 60px;"
+                            data-options="multiline:true" value="">
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

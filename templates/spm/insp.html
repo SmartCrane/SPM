@@ -1,0 +1,804 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    ::-ms-clear{display: none;}
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+    .a-upload {
+        padding: 4px 10px;
+        height: 12px;
+        line-height: 12px;
+        text-align: center;
+        position: relative;
+        color: #888;
+        background: #fafafa;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        overflow: hidden;
+        display: inline-block;
+        *display: inline;
+        *zoom: 1;
+        text-decoration: none
+    }
+    #upload{cursor: pointer;}
+    .a-upload  input {
+        position: absolute;
+        font-size: 100px;
+        right: 0;
+        top: 0;
+        opacity: 0;
+        filter: alpha(opacity=0);
+        cursor: pointer
+    }
+    .a-upload:hover {
+        color: #444;
+        background: #eee;
+        border-color: #ccc;
+        text-decoration: none
+    }
+    .panel-tool-close{
+        background: url();
+    }
+</style>
+<script type="text/javascript" src="{{STATIC_URL}}js/ajaxfileupload.js"></script>
+<script type="text/javascript">
+    var isimport = false;//区分是否是导入的数据，若是则后台要在临时表里存储
+    var organdtime;
+    var templatedesigner;
+    var designermphone;
+    var designertel; 
+    var people;
+    var mobile;
+    var email;//以上字段用于存储入库模版相关信息
+    //获取文件名显示到相应位置
+    function getFilename(){
+       var array = [];
+       array = $("#xlf").val().split('\\');
+       var filename = array[2];
+       var len = 0;
+       for (var i = 0; i < filename.length; i++) {
+            var a = filename.charAt(i);
+            if (a.match(/[^\x00-\xff]/ig) != null) {
+                len += 2;
+            } else{
+                len += 1;
+            }
+        }
+       if (len > 16) {
+           var filelast = filename.substring(filename.length-4);
+           var name = filename.substring(0, 4);
+           $("#upload").html(name+"..."+filelast);
+       } else {
+           $("#upload").html(filename);
+       }
+    }
+    function addChange(){
+        $("#xlf").change(function(){  // 当 id 为 file 的对象发生变化时
+            getFilename();
+        });
+    }
+    $(function(){
+        $('#dlg').dialog('close');
+        $('#dlg-refresh').dialog('close');//入库成功后，点击提示窗按钮刷新
+        addChange();
+    });
+    var spnumcache="";//缓存spnum，如果录入失败下次录入使用此spnum
+    function validate_insp(index){
+        var ed1 = $('#dg').datagrid('getEditor', {index:index,field:'spname'});
+        var ed2 = $('#dg').datagrid('getEditor', {index:index,field:'sid'});
+        var ed3 = $('#dg').datagrid('getEditor', {index:index,field:'spmodel'});
+        var ed4 = $('#dg').datagrid('getEditor', {index:index,field:'spserialnumbe'});
+        var ed5 = $('#dg').datagrid('getEditor', {index:index,field:'amount'});
+        var ed6 = $('#dg').datagrid('getEditor', {index:index,field:'unit'});
+        var ed7 = $('#dg').datagrid('getEditor', {index:index,field:'goodslocation'});
+        var ed8 = $('#dg').datagrid('getEditor', {index:index,field:'specification'});
+        var ed9 = $('#dg').datagrid('getEditor', {index:index,field:'spvalue'});
+        var ed10 = $('#dg').datagrid('getEditor', {index:index,field:'cid'});
+        var ed11 = $('#dg').datagrid('getEditor', {index:index,field:'supplier'});
+        var ed12 = $('#dg').datagrid('getEditor', {index:index,field:'manufacturer'});
+        var ed13 = $('#dg').datagrid('getEditor', {index:index,field:'factorydate'});
+        var ed14 = $('#dg').datagrid('getEditor', {index:index,field:'effectivedate'});
+        var ed15 = $('#dg').datagrid('getEditor', {index:index,field:'source'});
+        var ed16 = $('#dg').datagrid('getEditor', {index:index,field:'remark'});
+        if(ed2){
+            if ($(ed1.target).val() === "" && $(ed2.target).combobox('getValue')==="" && $(ed3.target).val() ==="" && $(ed4.target).val() ==="" &&  $(ed5.target).val() ==="" && $(ed6.target).val() ==="" &&
+                 $(ed7.target).val() ==="" && $(ed8.target).val() ==="" && $(ed9.target).val() ==="" && $(ed10.target).combobox('getValue') ==="" &&
+                  $(ed11.target).val() ==="" && $(ed12.target).val() ==="" && $(ed13.target).datebox('getValue') ==="" &&
+                   $(ed14.target).datebox('getValue') ==="" && $(ed15.target).val() ==="" && $(ed16.target).val() ==="") {
+                return true;
+            }  else {
+                if (!$("#dg").datagrid("validateRow",index)) {
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        }
+    }
+        var editIndex = undefined;
+        function endEditing(){
+            if (editIndex == undefined){return true}
+            if (validate_insp(editIndex)){
+                var ed1 = $('#dg').datagrid('getEditor', {index:editIndex,field:'cid'});
+                var cidname = $(ed1.target).combobox('getText');
+                $('#dg').datagrid('getRows')[editIndex]['cidname'] = cidname;
+                var ed = $('#dg').datagrid('getEditor', {index:editIndex,field:'sid'});
+                var sidname = $(ed.target).combobox('getText');
+                $('#dg').datagrid('getRows')[editIndex]['sidname'] = sidname;
+               operadata((editIndex-1), 3);  //记录未录完的该行数据
+                $('#dg').datagrid('endEdit', editIndex);
+                $('#dg').datagrid('cancelEdit', editIndex);
+                editIndex = undefined;
+                return true;
+            } else {
+                return false;
+            }
+        }
+        function onClickCell(index, field){
+            if (editIndex != index){
+                if (endEditing()){
+                    $('#dg').datagrid('selectRow', index)
+                            .datagrid('beginEdit', index);
+                    var ed = $('#dg').datagrid('getEditor', {index:index,field:field});
+                    var ed1 = $('#dg').datagrid('getEditor', {index:index,field:'cid'});
+                    var cidname = $(ed1.target).combobox('getText');
+                $(ed1.target).combobox('select', cidname);
+                    if (field != 'opera') {
+                        ($(ed.target).data('textbox') ? $(ed.target).textbox('textbox') : $(ed.target)).focus();
+                    }
+                    editIndex = index;
+                }
+//                  else {
+//                     $('#dg').datagrid('selectRow', index).datagrid('beginEdit', index);
+//                 }
+            }else{
+                $('#dg').datagrid('selectRow', index).datagrid('beginEdit', index);
+            }
+        }
+        function getNow(status){//获取当前时间点
+            var time = "";
+            var nowdate = new Date();
+            if (status == "date"){
+                var year = nowdate.getFullYear();
+                var month = nowdate.getMonth+1;
+                var day = nowdate.getDate();
+                time = day + "/" + month + "/" + year;
+            } else {
+                var hour = nowdate.getHours();
+                var minute = nowdate.getMinutes();
+                var seconds = nowdate.getSeconds();
+                time = hour + ":" + minute + ":" + seconds;
+            }
+            return time;
+        }
+        //选中专业中一项所触发的事件
+        function selectEvent(recordid, isClear){
+            if (recordid) {
+                var ed1 = $('#dg').datagrid('getEditor', {index:editIndex,field:'cid'});
+                if (isClear){
+                    $(ed1.target).combobox('clear');
+                } 
+                if(ed1){
+                    $(ed1.target).combobox('reload', '/get_speciality_category?sid='+recordid);
+                }
+            }
+        }
+        function sum(rows, filed){
+            var sumNum = 0;
+            if (filed == "amount") {
+                for(var i=0;i<rows.length;i++){
+                    if (!(rows[i].amount)) {
+                        sumNum += 0;
+                    } else {
+                        sumNum += Number(rows[i].amount);
+                    }
+                }
+            } else {
+                for(var i=0;i<rows.length;i++){
+                    if (!Number(rows[i].spvalue)) {
+                        sumNum += 0;
+                    } else {
+                        sumNum += Number(rows[i].spvalue);
+                    }
+                }
+            }
+            return sumNum;
+        }
+        //重新计算合计数
+        function resetTotal(status){
+            var rows = $("#dg").datagrid("getRows");
+            var amount = sum(rows, "amount");
+            var spvalue = sum(rows, "spvalue");
+            if (status == "clear") {
+                var ed1 = $('#dg').datagrid('getEditor', {index:editIndex,field:'amount'});
+                var ed2 = $('#dg').datagrid('getEditor', {index:editIndex,field:'spvalue'});
+                amount = amount - $(ed1.target).val();
+                spvalue = spvalue - $(ed2.target).val();
+            }
+            var footerStr = '[{"spname":"合计","amount":'+amount+', "spvalue": '+spvalue+'}]';
+            var footerData = $.parseJSON(footerStr);
+            $("#dg").datagrid("reloadFooter", footerData);
+        }
+        function createGrid(data){
+            $('#dg').datagrid({
+                data: data,
+                showFooter: true,
+                rownumbers: true,
+                fitColumns: true,
+                singleSelect: true,
+                nowrap: true,
+                toolbar: '#tb',
+                onClickCell: function(index,field,value){
+                    onClickCell(index,field);
+                    var rows = $("#dg").datagrid("getRows");
+                    if (rows[index].sid !="") {
+                        selectEvent(rows[index].sid, false);
+                    }
+                    //控制复制的显示与隐藏
+                    $(".opera").each(function(dex){
+                        if (("opera1" + editIndex)==("opera1" + dex)) {
+                            if (dex == 0) {
+                                $("#opera1" + dex).css('display', 'none');
+                            } else {
+                                $("#opera1" + dex).css('display', 'block');
+                            }
+                            $("#opera2" + dex).css('display', 'block');
+                        } else {
+                            $("#opera1" + dex).css('display', 'none');
+                            $("#opera2" + dex).css('display', 'none');
+                        }
+                    });
+                },
+                onEndEdit: function(index, row, changes){
+                    resetTotal("plus");
+                },
+                columns:[[//表格的列定义
+                    {field:'spname',title:'<font style="color: red;">*</font>配件名称',width:200,align:'center',
+                        editor : {
+                                type : 'validatebox',
+                                options : {
+                                    required : true,//规定必填
+                                    validType: 'maxLength[60]',//添加对数据长度的判断
+                                }
+                            }
+                    },
+                    {field:'spmodel',title:'配件型号',width:200,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType: 'maxLength[50]'
+                        }
+                    }},
+                    {field:'spserialnumbe',title:'配件序号',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType: 'maxLength[32]'
+                        }
+                    }},
+                    {field:'amount',title:'<font style="color: red;">*</font>数量',width:80,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            required: true,
+                            validType:'checkPrice',
+                            missingMessage:"配件数量,例如:4"
+                        }
+                    }},
+                    {field:'unit',title:'<font style="color: red;">*</font>单位',width:80,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            required: true,
+                            validType:'maxLength[20]',
+                            missingMessage:"单位,例如:个、箱",
+                        }
+                    }},
+                    {field:'goodslocation',title:'<font style="color: red;">*</font>货位号',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            required: true,
+                            validType:'checkLocation',
+                            missingMessage:"例:WFBZ-0101(潍坊滨州维修班- 01货架01层)。<br/>对于未对货位进行专业管理的单位，<br/>货位号可置特殊数字，如 WF99-9999。",
+                        }
+                    }},
+                    {field:'specification',title:'规格',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType:'maxLength[100]'
+                        }
+                    }},
+                    {field:'spvalue',title:'单价',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType:'checkPrice'
+                        }
+                    }},
+                    {field:'sid',title:'<font style="color: red;">*</font>专业',width:170,align:'center', formatter:function(value,row){
+                                return row.sidname;
+                            },
+                        editor: { type: 'combobox',
+                            options: {valueField: "id", textField: "text",
+                                url: "/get_user_speciality",
+                                method: "get",
+                                onSelect: function(record){
+                                    selectEvent(record.id, true);
+                                },
+                                required: true
+                            }
+                        }
+                    },
+                    {field:'cid',title:'种类',width:170,align:'center', formatter:function(value,row){
+                                return row.cidname;
+                            }, editor: { type: 'combobox',
+                            options: {valueField: "id", textField: "text",method: "get",editable: false
+                            }
+                        }},
+                    {field:'supplier',title:'供应商',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType:'maxLength[200]'
+                        }
+                    }},
+                    {field:'manufacturer',title:'厂家',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType:'maxLength[50]'
+                        }
+                    }},
+                    {field:'factorydate',title:'出厂日期',width:100,align:'center', editor: {
+                            type: 'datebox',
+                            options: {
+                                validType: 'checkDate',
+                                editable: false
+                            }
+                        }},
+                    {field:'effectivedate',title:'有效日期',width:100,align:'center', editor: {
+                            type: 'datebox',
+                            options: {
+                                validType: 'checkDate',
+                                editable: false
+                            }
+                        }},
+                    {field:'source',title:'来源',width:100,align:'center', editor: {
+                        type: 'validatebox',
+                        options: {
+                            validType:'maxLength[255]'
+                        }
+                    }},
+                    {field:'remark',title:'备注',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]'
+                        }
+                    }},
+                    {field:'opera',title:'操作',width:100,align:'center', formatter :
+                        function(value, row, index) {
+                            var str = '<a id="opera1'+ index +'" class="opera" style="display: none;" href="#" onclick="operadata('+ (index-1) +', 1);">复制</a>'+
+                                '<a id="opera2'+ index +'" class="opera" style="display: none;" href="#" onclick="operadata('+ (index-1) +', 2);">清空</a>';
+                            return str;
+                    }},
+                    //一下列为隐藏列。录入ods_in_sp_info表使用
+                    {field:'indate',hidden:true,title:'入库日期',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'intime',hidden:true,title:'入库时间',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'inuser',hidden:true,title:'入库人',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'remark1',hidden:true,title:'备注1',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'remark2',hidden:true,title:'备注2',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'remark3',hidden:true,title:'备注3',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'remark4',hidden:true,title:'备注4',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                    {field:'remark5',hidden:true,title:'备注5',width:100,align:'center', editor: {
+                        type: 'textarea',
+                        options: {
+                            validType:'maxLength[1000]',
+                        }
+                    }},
+                ]]
+            });
+        }
+    function handleFile() {
+            $("#preloading").css('display', 'block');  //显示正在加载div
+            $.ajaxFileUpload({
+                url: '/read_excel', //用于文件上传的服务器端请求地址
+               // secureuri: false,           //一般设置为false
+                method:"post",
+                secureuri: false,
+                dataType: 'json',
+                //form:$("#formLoad1"),
+                data:{"csrfmiddlewaretoken":$("input[name=csrfmiddlewaretoken]").val()},
+                fileElementId: $("input#xlf").attr("id"), //文件上传控件的id属
+                dataType: 'json',//返回值类型 一般设置为json
+                    success: function (data, status) { //服务器成功响应处理函数
+                    	isimport = true;
+                        organdtime = data.organdtime;
+                        templatedesigner = data.templatedesigner;
+                        designermphone = data.designermphone;
+                        designertel = data.designertel;
+                        people = data.people;
+                        mobile = data.mobile;
+                        email = data.email;
+                        var ret = {"rows":data.rows};
+                        
+                        /*$('#dg').datagrid({"onLoadSuccess":function(data){
+                        $(this).datagrid('selectRow',3);
+                        }}).datagrid("loadData",XXXXX);*/
+                        
+                        $("#dg").datagrid("loadData", ret);
+                        
+                        
+                        var rows = $("#dg").datagrid("getRows");
+                        $("#preloading").css('display', 'none'); //隐藏正在加载div
+                        $('#dlg').dialog('open');
+                        $('#dlg').html('<div style="text-align: center;padding-top: 20px;">导入成功！</div>');
+                        if(data.status == 'ok'){
+                        }            /* 这里就是做一些其他操作，比如把图片显示到某控件中去之类的。*/
+                        addChange();
+                    },
+                    error: function (data, status, e){//服务器响应失败处理函数
+                    	$("#preloading").css('display', 'none');
+                    	var filename = $("#upload").html();
+                        $('#dlg').dialog('open');
+                        if ($("#upload").html().indexOf('.xls') == -1 || $("#upload").html().indexOf('.xlsx')== -1) {
+                            if ($("#upload").html() == '点击这里上传文件'){
+                                $('#dlg').html('<div style="text-align: center;padding-top: 20px;">请选择要导入的文件</div>');
+                            } else {
+                                $('#dlg').html('<div style="text-align: center;padding-top: 20px;">请检查您导入的文件格式是否为xls或xlsx</div>');
+                            }
+                        } else {
+                            $('#dlg').html('<div style="text-align: center;padding-top: 20px;">导入失败！</div>');
+                        }
+                        addChange();
+                    }
+        });
+        return false;
+    }
+
+    $(document).ready(function(){
+        //给入库日期和时间赋予当前值
+        var nowdate = getNow("date");
+        var nowtime = getNow("time");
+        $('#date').datebox('setValue', nowdate);
+        $('#time').timespinner('setValue', nowtime);
+        var dateStr = '{"total":9,"rows": [{},{},{},{},{},{},{},{},{},{}],"footer":[{"spname":"合计","amount":0,"spvalue":0}]}';
+        var data = $.parseJSON(dateStr);
+        createGrid(data);
+
+    });
+    function addRow(){//增加一行表格
+        var rows = $("#dg").datagrid("getRows");
+        var allRowNum = rows.length;
+        $('#dg').datagrid('appendRow',{
+            spname: '',spmodel: '',spserialnumbe: '',amount:'',unit:'',goodslocation:'',
+            specification:'',spvalue:'',sid:'',cid:'',supplier:'',manufacturer:'',factorydate:'',
+            effectivedate:'',source:'',remark:'',
+            opera: '<a id="opera'+allRowNum+'" class="opera" style="display: none;" href="#" onclick="operadata('+(allRowNum-1)+', 1);">复制</a>'+
+            '<a id="opera'+allRowNum+'" class="opera" style="display: none;" href="#" onclick="operadata('+(allRowNum-1)+', 2);">清空</a>'
+        });
+    }
+    //status: 1 --复制上一行数据信息   2-- 清空该行信息
+    function operadata(index, status){
+        var rows = $("#dg").datagrid("getRows");
+        var ed1 = $('#dg').datagrid('getEditor', {index:index+1,field:'spname'});
+        var ed2 = $('#dg').datagrid('getEditor', {index:index+1,field:'sid'});
+        var ed3 = $('#dg').datagrid('getEditor', {index:index+1,field:'spmodel'});
+        var ed4 = $('#dg').datagrid('getEditor', {index:index+1,field:'spserialnumbe'});
+        var ed5 = $('#dg').datagrid('getEditor', {index:index+1,field:'amount'});
+        var ed6 = $('#dg').datagrid('getEditor', {index:index+1,field:'unit'});
+        var ed7 = $('#dg').datagrid('getEditor', {index:index+1,field:'goodslocation'});
+        var ed8 = $('#dg').datagrid('getEditor', {index:index+1,field:'specification'});
+        var ed9 = $('#dg').datagrid('getEditor', {index:index+1,field:'spvalue'});
+        var ed10 = $('#dg').datagrid('getEditor', {index:index+1,field:'cid'});
+        var ed11 = $('#dg').datagrid('getEditor', {index:index+1,field:'supplier'});
+        var ed12 = $('#dg').datagrid('getEditor', {index:index+1,field:'manufacturer'});
+        var ed13 = $('#dg').datagrid('getEditor', {index:index+1,field:'factorydate'});
+        var ed14 = $('#dg').datagrid('getEditor', {index:index+1,field:'effectivedate'});
+        var ed15 = $('#dg').datagrid('getEditor', {index:index+1,field:'source'});
+        var ed16 = $('#dg').datagrid('getEditor', {index:index+1,field:'remark'});
+        if (status == 1) {
+            $(ed1.target).val(rows[index].spname);
+            $(ed2.target).combobox('setValue',rows[index].sid);
+            selectEvent(rows[index].sid, false);
+            $(ed3.target).val(rows[index].spmodel);
+            $(ed4.target).val(rows[index].spserialnumbe);
+            $(ed5.target).val(rows[index].amount);
+            $(ed6.target).val(rows[index].unit);
+            $(ed7.target).val(rows[index].goodslocation);
+            $(ed8.target).val(rows[index].specification);
+            $(ed9.target).val(rows[index].spvalue);
+            $(ed10.target).combobox('setValue',rows[index].cid);
+            $(ed11.target).val(rows[index].supplier);
+            $(ed12.target).val(rows[index].manufacturer);
+            $(ed13.target).datebox('setValue',rows[index].factorydate);
+            $(ed14.target).datebox('setValue',rows[index].effectivedate);
+            $(ed15.target).val(rows[index].source);
+            $(ed16.target).val(rows[index].remark);
+        } else if (status == 2){
+            resetTotal("clear"); //重新统计合计数
+            rows[index+1].spname = "";
+            rows[index+1].spmodel = "";
+            rows[index+1].spserialnumbe = "";
+            rows[index+1].amount = "";
+            rows[index+1].unit = "";
+            rows[index+1].goodslocation = "";
+            rows[index+1].specification = "";
+            rows[index+1].spvalue = "";
+            rows[index+1].sid = "";
+            rows[index+1].cid = "";
+            rows[index+1].supplier = "";
+            rows[index+1].manufacturer = "";
+            rows[index+1].factorydate = "";
+            rows[index+1].effectivedate = "";
+            rows[index+1].source = "";
+            rows[index+1].remark = "";
+            $(ed1.target).val('');
+            $(ed2.target).combobox('setValue','');
+            $(ed3.target).val('');
+            $(ed4.target).val('');
+            $(ed5.target).val('');
+            $(ed6.target).val('');
+            $(ed7.target).val('');
+            $(ed8.target).val('');
+            $(ed9.target).val('');
+            $(ed10.target).combobox('setValue','');
+            $(ed11.target).val('');
+            $(ed12.target).val('');
+            $(ed13.target).datebox('setValue','');
+            $(ed14.target).datebox('setValue','');
+            $(ed15.target).val('');
+            $(ed16.target).val('');
+        }
+    }
+    //对正在编辑且还没有完全编辑完的行是否有数据进行验证
+    function isHasData(){
+        var isHasData = false; //判断正在编辑的行，是否有数据  false: 没有  true： 有
+        //获取所有列的名称
+        var fields = $('#dg').datagrid('getColumnFields').concat($('#dg').datagrid('getColumnFields'));
+            for(var j=0; j<fields.length; j++){
+                if (fields[j] != "opera") {
+                    // 获取正在编辑的列的对象
+                    var edit = $('#dg').datagrid('getEditor', {index:editIndex,field:fields[j]});
+                    if (edit != null) {
+                        //根据每列的类型进行是否已经输入数据的判断
+                        if (edit.type == "validatebox" || edit.type == "textarea") {
+                            if ($(edit.target).val() != "" && $(edit.target).val() != null) {
+                                isHasData = true; //是否没有数据属性为false, 即如果该行任意一个单元格已经填写了数据，就跳出循环
+                                break;
+                            }
+                        } else if (edit.type == "combobox") {
+                            if ($(edit.target).combobox('getValue') != "" && $(edit.target).combobox('getValue') != null) {
+                                isHasData = true;
+                                break;
+                            }
+                        } else {
+                            if ($(edit.target).datebox('getValue') != "" && $(edit.target).datebox('getValue') != null) {
+                                isHasData = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            //获取完输入的数据时，再结束正在编辑
+            $("#dg").datagrid("endEdit",editIndex);
+            return isHasData;
+    }
+    //是否已经录入了一条信息
+    function isHasWrite(){
+        var rows = $("#dg").datagrid("getRows");
+        var isHasWrite = false;
+        for (var i=0; i<rows.length;i++) {
+            var spname = rows[i].spname;
+            var amount = rows[i].amount;
+            var unit = rows[i].unit;
+            var goodslocation = rows[i].goodslocation;
+            var sid = rows[i].sid;
+            if (spname != "" && spname != null && amount !="" && amount != null &&
+             unit !="" &&  unit != null && goodslocation !="" && goodslocation != null &&
+              sid !="" && sid != null) {
+                isHasWrite = true;
+                break;
+            }
+        }
+        return isHasWrite;
+    }
+    //入库信息的提交
+    function submit(){
+        //如果没有录入完整的入库信息
+        var isHasData1 = isHasData();  //判断正在编辑的行，是否已经输入了数据
+        var isWrite = isHasWrite();//是否已经录入一条入库信息
+        if (!isHasData1 && !isWrite) {
+            $('#dlg').dialog('open');
+            $('#dlg').html('<div style="text-align: center;padding-top: 20px;">请至少录入一条入库信息！</div>');
+            return;
+        }
+        //如果该行有数据且是现在编辑的行，则进行验证, 若该行无数据则不进行校验
+        if (isHasData1 && !$("#dg").datagrid("validateRow",editIndex)) {
+            var err_index = editIndex+1;
+            $('#dlg').dialog('open');
+             $('#dlg').html('<div style="text-align: center;padding-top: 20px;">第' + err_index + '行数据信息输入有误</div>');
+            return;
+        }
+        $("#preloading").css('display', 'block'); //显示正在加载div
+        var dataJSON = {"data":""};
+        var datastr = [];
+        var rowsData = $("#dg").datagrid("getRows");
+        for (var i=0;i<rowsData.length;i++){
+            //去除名称前后空格，并且合并中间连续出现的空格为一个
+            rowsData[i].spname = trimSpace(rowsData[i].spname);
+            rowsData[i].spmodel = trimSpace(rowsData[i].spmodel);
+            rowsData[i].spserialnumbe = trimSpace(rowsData[i].spserialnumbe);
+            rowsData[i].amount = trimSpace(rowsData[i].amount);
+            rowsData[i].unit = trimSpace(rowsData[i].unit);
+            rowsData[i].goodslocation = trimSpace(rowsData[i].goodslocation);
+            rowsData[i].specification = trimSpace(rowsData[i].specification);
+            rowsData[i].supplier = trimSpace(rowsData[i].supplier);
+            rowsData[i].manufacturer = trimSpace(rowsData[i].manufacturer);
+            rowsData[i].source = trimSpace(rowsData[i].source);
+            datastr.push(rowsData[i]);
+        }
+        dataJSON.data =  datastr;
+        var data_json = JSON.stringify(datastr);
+        if(isimport){
+            var ajaxurl = '/insert_database?isimport=true';
+            var ajaxdata = {data: data_json, spnum: spnumcache,
+                operuser: $("#operuser").val(),
+                date: $('#date').datebox('getValue'),
+                time: $('#time').timespinner('getValue'),
+                userorg: $('#userorg').combobox('getValue'),
+                organdtime:organdtime,templatedesigner:templatedesigner,
+                designermphone:designermphone,designertel:designertel,
+                people:people,mobile:mobile,email:email};
+        }else{
+            var ajaxurl = '/insert_database';
+            var ajaxdata = {data: data_json, spnum: spnumcache,
+                operuser: $("#operuser").val(),
+                date: $('#date').datebox('getValue'),
+                time: $('#time').timespinner('getValue'),
+                userorg: $('#userorg').combobox('getValue')};
+        }
+        $.ajax({
+            url:ajaxurl,
+            data:ajaxdata,
+            type:'post',
+            success:function(data){
+                if(data.status == 'ok'){
+                    $("#preloading").css('display', 'none'); //隐藏正在加载div
+                    $('#dlg-refresh').dialog('open');
+                    $('#dlg-refresh').html('<div style="text-align: center;padding-top: 20px;">录入成功,入库单号：' + data.recordid + '</div>');
+                }
+            },
+            error:function(a){
+                $("#preloading").css('display', 'none'); //隐藏正在加载div
+                if(a.responseText != "error"){
+                    spnumcache = a.responseText;
+                }
+                if(a.readyState==0){
+                    $('#dlg').dialog('open');
+                    $('#dlg').html('<div style="text-align: center;padding-top: 20px;">无法连接到服务器，请检查网络</div>');
+                    $("#dg").datagrid("beginEdit",editIndex);
+                }else{
+                    $('#dlg').dialog('open');
+                    $('#dlg').html('<div style="text-align: center;padding-top: 20px;">录入失败：请检查重试</div>');
+                    $("#dg").datagrid("beginEdit",editIndex);
+                }
+            }
+        });
+        return false;
+    }
+    function trimSpace(value){//去除前后空格，并且合并连续出现的空格为一个
+        var trim_value = $.trim(value).replace(/[" "]+/g," ");
+        return trim_value;
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'" style="overflow: hidden;">
+        <div id="preloading" style="display: none;position: absolute;height: 100%;width: 100%;z-index: 5;
+            background:url({{STATIC_URL}}images/preloading.gif) no-repeat center center;background-color: white;opacity: 0.5;  
+            filter: alpha(opacity=50); ">
+        </div>
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="savetop" data-options="region:'north'" border="false" style="height: auto;overflow: hidden;">
+                    <div style="float: left;line-height: 30px;">
+                        <label for="operuser" style="margin: -5px 3px 0 5px;">操作人:</label>
+                        <input class="easyui-textbox" id="operuser" name="operuser" style="width: 150px"
+                                data-options="disabled: true,prompt:''" value="{{user.username}}">
+                        <label for="operuser" style="margin: -5px 3px 0 0;">单位:</label>
+                        <select id="userorg" class="easyui-combobox" name="userorg" style="width:150px;" {% if currentuserorg|length == 1 %}disabled="disabled"{% endif %}>
+                            {% for org in currentuserorg %}
+                                <option value="{{org.orgid}}">{{org.orgname}}</option>
+                            {% endfor %}
+                        </select>
+                        <label for="date" style="margin: -5px 3px 0 0px;">入库日期:</label>
+                        <input class="easyui-datebox" id="date" name="date" style="width: 150px"
+                                data-options="editable: false" value="">
+                    </div>
+                    <div style="float: left;padding-right: 130px;height: 30px;line-height: 30px">
+                        <div style="float: left;width: auto;">
+                            <label for="time" style="margin: 5px 3px 0 5px;">入库时间:</label>
+                            <input class="easyui-timespinner" id="time" name="time" style="width: 150px"
+                                    data-options="showSeconds:true,prompt:''" value="">
+                        </div>
+                    </div>
+                       <div style="float: right;margin-top: 6px;width: 228px;">
+                            <a id="insp" href="#" class="easyui-linkbutton" style="
+                            width: 50px;height: 21px;float: right;" onclick="submit();">入库</a>
+                            <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                                    width: 50px;height: 21px;float: right; " onclick="handleFile();">导入</a>
+                             <form style="margin:0;padding:0;" id="formLoad1" enctype="multipart/form-data" encoding="multipart/form-data" method="POST" target="CostIframe">
+                                        {% csrf_token %}
+                                   <a id="a-upload" href="javascript:;" class="a-upload">
+                                        <input type="file" name='file' id='xlf' style="width: 120px;"/>
+                                        <span id="upload">点击这里上传文件</span>
+                                    </a>
+                                        <!-- <span id="upload" style="display: none;">点击这里上传文件</span>
+                                    <input type="file" name='file' id='xlf' class="upload" style="width: 120px;"/> -->
+                                   
+                              </form>                
+                        </div>
+            </div>
+            <div id="savecontent" data-options="region:'center',border: false" style="overflow-x: hidden;">
+                <div id="tb">
+                    <a href="#" class="easyui-linkbutton" data-options="iconCls: 'icon-add'" onclick="addRow();">添加</a>
+                </div>
+                <div id="dg" style="width:100%;height: 100%;" >
+                    <div id="dlg" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                        text:'确定',
+                        iconCls:'',
+                        handler:function(){
+                            $('#dlg').dialog('close');
+                        }
+                    }]" style="width:200px;height:150px;padding:10px">
+                    </div>
+                    <div id="dlg-refresh" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                        text:'确定',
+                        iconCls:'',
+                        handler:function(){
+                            location.reload();
+                            $('#dlg-refresh').dialog('close');
+                        }
+                    }]" style="width:200px;height:150px;padding:10px">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

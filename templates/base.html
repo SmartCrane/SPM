@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<html  lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<!--通知 Windows Internet Explorer 以最高级别的可用模式显示内容-->
+<meta http-equiv="X-UA-Compatible" content="edge" />
+<meta name="renderer" content="webkit"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+<title></title>
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}js/easyui/themes/default/easyui.css" id="swicth-style">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}js/easyui/themes/icon.css">
+<style>
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow:hidden;
+    padding: 0;
+    font-family: "宋体";
+}
+</style>
+<script src="{{STATIC_URL}}js/jquery-1.7.2.min.js"></script>
+<script src="{{STATIC_URL}}js/easyui/jquery.easyui.min.js"></script>
+<script src="{{STATIC_URL}}js/easyui-lang-zh_CN.js"></script> 
+<script type="text/javascript">
+(function($) {  
+    /** 
+     * jQuery EasyUI --- 功能扩展 
+     */  
+    $.extend($.fn.validatebox.defaults.rules, {  
+        checkNum: {  
+            validator: function(value, param) {
+                return /^([0-9]+)$/.test(value);  
+            },  
+            message: '请输入正整数'  
+        },
+        maxLength: {
+            validator: function(value, param) {
+                var result = true;
+                var len = 0;
+                for (var i = 0; i < value.length; i++) {
+                     var a = value.charAt(i);
+                     if (a.match(/[^\x00-\xff]/ig) != null) {
+                        len += 2;
+                    } else{
+                        len += 1;
+                    }
+                }
+                if (len > param[0]) {
+                    result = false;
+                }
+                return result; 
+            },
+            message: '最大长度不能超过{0}'
+        },
+        checkPrice: {
+            validator: function(value, param) {
+                var reg = /(^[+]?[1-9]\d*(\.\d{1,2})?$)|(^[-+]?[0]{1}(\.\d{1,2})?$)/;
+                return reg.test(value);
+            },
+            message: '单价必须为合法数字(正数，最多两位小数)'
+        },
+        checkDate: {
+            validator: function(value, param){
+                var date_reg = /^[0-9]{4}-[0-1]?[0-9]{1}-[0-3]?[0-9]{1}$/;
+                return date_reg.test(value);
+            },
+            message: '您输入的日期格式有误，正确格式应为:2012-01-01'
+        },
+        checkOrgdic:{
+        validator:function(value,param){
+            var orgdic_reg=/^[A-Z]{2,4}$/;
+            return orgdic_reg.test(value);
+        },
+        //message: '您输入的日期格式有误，正确格式应为:2012-01-01'
+        message: '您输入的单位简称格式有误.<br/>两位到四位大写字母。例如：WF.'
+        },
+        checkLocation: {
+            validator: function(value, param){
+                var location_reg = /^[A-Z]{2}[A-Z0-9]{2}-[0-9]{4}$/;
+                return location_reg.test(value);
+            },
+            message: '您输入的货位号格式有误，<br/>例:WFBZ-0101(潍坊滨州维修班- 01货架01层)。<br/>对于未对货位进行专业管理的单位，<br/>货位号可置特殊数字，如 WF99-9999。'
+        }
+    }); 
+})(jQuery);  
+</script>   
+{% block extrahead %}{% endblock %}
+</head>
+<body id="layout" class="easyui-layout">
+{% block topcontent %}
+{% if not hidetop%}
+<div id="top" data-options="region:'north'" style="height:80px;border:0">
+<div id="top1" data-options="region:'north'" style="height:50px;background-color: #004AA9;
+  color: white;
+  line-height: 50px;
+  font-size: 2em;
+  font-family: 'Microsoft YaHei';">
+    <span>管道储运有限公司备品备件管理系统</span>
+</div>
+<div id="top2" data-options="region:'center'" style="height:29px;background-color: #D5E3F3;
+  line-height: 28px;
+  text-align: right;
+  padding-right: 5px;
+  border-bottom: 1px solid #99BBE9;">
+    <span>您好,{{currentuser}},欢迎您　<a href="/logout" class="easyui-linkbutton" data-options="plain:true,iconCls:'icon-cancel'">退出系统</a></span>
+</div>
+</div>
+{% endif %}
+{% endblock %}
+{% block leftcontent %}
+{% if not hideleft%}
+<div id="left" data-options="region:'west'" style="width:158px;text-align: center;">
+    <div class="easyui-accordion" data-options="multiple:true" style="width:156px;height1:300px;">
+        <div title="备品备件查询" style="overflow:auto;padding:10px;line-height: 2;">
+            <a href="/spm" style="padding-bottom:15px">库存动态查询</a><br>
+            <a href="/spm_query">入库记录查询</a>
+        </div>
+        <div title="出入库管理" style="padding:10px;line-height: 2;">
+            <a href="/insp" style="padding-bottom:15px">入库管理</a><br/>
+            <a href="/outsp">出库管理</a><br/>
+            <a href="/insp_query">入库修改</a>
+        </div>
+        <div title="基础信息维护" style="padding:10px;line-height: 2;">
+            <a href="/manage_user" style="padding-bottom:15px">用户管理</a><br/>
+            <a href="/manage_fac">专业管理</a><br/>
+            <a href="/manage_cat">种类管理</a><br/>
+            <a href="/manage_org">单位管理</a><br/>
+            <a href="/ods_spm_query">入库临时表查询</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block maincontent %}{% endblock %}
+</body>
+</html>

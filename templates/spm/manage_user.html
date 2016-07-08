@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    .l-btn{
+        vertical-align:middle;
+    }
+    .button-sep{
+        display:inline-block;
+        width:0;
+        height:22px;
+        border-left:1px solid #ccc;
+        border-right:1px solid #fff;
+    }
+</style>
+<script type="text/javascript" src="{{STATIC_URL}}js/datagrid-filter.js"></script>
+<script type="text/javascript">
+    var sel="";
+    var isOpen = false;//判断添加用户窗体是否打开过
+
+        //编辑单元格的方法
+    $.extend($.fn.datagrid.methods, {
+            editCell: function(jq,param){
+                return jq.each(function(){
+                    var opts = $(this).datagrid('options');
+                    var fields = $(this).datagrid('getColumnFields',true).concat($(this).datagrid('getColumnFields'));
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor1 = col.editor;
+                        if (fields[i] != param.field){
+                            col.editor = null;
+                        }
+                    }
+                    $(this).datagrid('beginEdit', param.index);
+                    for(var i=0; i<fields.length; i++){
+                        var col = $(this).datagrid('getColumnOption', fields[i]);
+                        col.editor = col.editor1;
+                    }
+                    $(this).blur();
+                });
+            }
+        });
+        
+        
+
+    $(document).ready(function(){
+        $('#dlg').dialog('close');
+        $('#alertdlg').dialog('close');
+        var sel="";
+       
+        
+        $('#orgsearch').combobox(
+        {
+            valueField:'id',
+            textField:'text',
+            editable:false,
+            DropDownStyle:'DropDownList',
+            url:"/get_common_org",
+            //url: "/get_user_speciality",
+            method:'get',
+            formatter:function(row){
+                var opts = $(this).combobox('options');
+                return row[opts.textField];
+                            },
+                            
+                            
+            
+            //筛选所选单位下用户信息
+            
+            onSelect:function(record){
+            //alert(record.text);
+                 sel=$(this).combobox('getValue');
+                 //alert(sel);
+                 //$('#text').textbox('setValue',"ee");
+                 if(sel>0){
+                $('#dg').datagrid({
+                fitColumns: true,
+                showFooter: true,
+                 rownumbers: true,
+                fitColumns: true,
+                pagination: true,
+                singleSelect:false,
+                pageSize: 20,
+                pageList:[20,30,40,50],
+                nowrap: true,
+               
+                url:"/get_select_user_data?sel="+sel,
+                method: "get",
+                columns:[[
+                
+                {field:'usercode',title:'用户编号',width:100,align:'center'},
+                {field:'username',title:'用户姓名',width:100,align:'center'},
+                {field:'orgname',title:'单位名称',width:100,align:'center'},
+                {field:'amount',title:'保留字段',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        
+                    }
+                }},
+                ]]
+               
+            });
+           $('#dg').datagrid('reload');
+           }else
+           {
+               //$('#dg').datagrid('reload',{url:"/get_user_data",method:"get"});
+               $('#dg').datagrid(
+               {
+                   url:"/get_user_data",
+                   method:"get",
+               }
+               )
+               $('#dg').datagrid('reload');
+           }
+        },
+        
+        });
+        
+                
+        $('#dg').datagrid({
+            url: "/get_user_data",
+            //url:"/get_user_data?sel="+sel,
+            method: "get",
+            fitColumns: true,
+           showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:false,
+            pageSize: 10,
+            pageList:[10,20,30,40,50],
+            page:1,
+            nowrap: true,
+            
+            columns:[[
+                
+                {field:'usercode',title:'用户编号',width:100,align:'center'},
+                {field:'username',title:'用户姓名',width:100,align:'center'},
+                {field:'orgname',title:'单位名称',width:100,align:'center'},
+                {field:'amount',title:'保留字段',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        
+                    }
+                }},
+                
+            ]]
+            
+        });
+       
+       
+    }); 
+    var dataArray;
+ 
+ 
+ 
+    
+    //获取大库中用户信息
+    var orgname;
+    function outsubmit(){
+     orgname=$('#orgsearch').combobox('getValue');
+    if(orgname==""||orgname==null||orgname==0){
+        $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">请选择单位!</div>');
+        $('#alertdlg').dialog('open');
+        
+        //alert("请选择单位！");
+    }
+    else{
+       // alert(orgname);
+    
+    if(!isOpen){
+     
+          $('#dlg').dialog({
+                onClose:function(){
+                $("#showdg").datagrid('reload');
+               // alert("Close");
+               
+                }        
+             });
+             $('#dlg').dialog('open');
+        isOpen = true;
+        
+            $('#showdg').datagrid({
+            url: "/get_exa_user?randnum="+Math.floor(Math.random()*1000000),
+            //url: "/get_exa_user",
+           fitColumns: true,
+           showFooter: true,
+            rownumbers: true,
+            fitColumns: true,
+            pagination: true,
+            singleSelect:false,
+            pageSize: 20,
+            nowrap: true,
+            method:"get",
+            
+            onClickCell: function(index,field,value){
+                onClickCell(index,field);
+            },
+            
+             columns:[[
+                {field:'check',width:50,align:'center',checkbox: true},
+                {field:'usercode',title:'用户编号',width:100,align:'center'},
+                {field:'username',title:'用户名称',width:100,align:'center'},
+                
+                
+               /* {field:'spmodel',title:'配件型号',width:100,align:'center'},
+                {field:'unit',title:'单位',width:100,align:'center'},
+                {field:'amount',title:'数量',width:100,align:'center', editor: {
+                    type: 'validatebox',
+                    options: {
+                        validType:'checkPrice'
+                    }
+                }},
+                {field:'spvalue',title:'单价',width:100,align:'center'},
+                {field:'totalvalue',title:'总额',width:100,align:'center'}*/
+            ]]
+        }); 
+        
+         //添加过滤
+        $('#showdg').datagrid('enableFilter',[{
+                field:'amount',
+                type:'numberbox',
+                op:['equal','notequal','less','greater']
+            },
+            ]); 
+            }
+            else {
+                $('#dlg').dialog('open'); 
+            }
+         };    
+    }
+    function submit() {
+        dataJSON={"rows":""};
+        var dataarrayorgs=$("#showdg").datagrid("getChecked");
+        dataJSON.rows=dataarrayorgs;
+        var data_str = JSON.stringify(dataarrayorgs);
+        $.ajax({
+            url:"/out_exa_user?orgname="+orgname,
+            data:{data: data_str},
+            type:'post',
+            success:function(data){
+                if(data == 'ok'){
+                    //alert('添加用户成功');
+                    $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">添加用户成功!</div>');
+                    $('#alertdlg').dialog('open');
+                    $('#dg').datagrid('clearSelections');
+                    //$('#dlg').dialog('close');
+                    
+                    $('#showdg').datagrid('reload');
+                    $('#dlg').dialog('refresh');
+                    $('#dg').datagrid({
+                    showFooter: true,
+                rownumbers: true,
+                fitColumns: true,
+                pagination: true,
+                pageSize: 20,
+                nowrap: true,
+               
+                url:"/get_select_user_data?sel="+orgname,
+                method: "get",
+                })
+                    
+                    //location.reload();
+                }
+            },
+            error:function(a){
+                $('#alertdlg').html('<div style="text-align: center;padding-top: 20px;">添加用户失败：+a.responseText</div>');
+                $('#alertdlg').dialog('open');
+                //alert('添加用户失败：'+a.responseText);
+                $("#dg").datagrid("beginEdit",editIndex);
+            }
+        });
+    }
+</script>
+{% endblock %}
+{% block maincontent %}
+    <div id="right" data-options="region:'center'" style="overflow: hidden;">
+        <div id="layout1" class="easyui-layout" fit="true">
+            <div id="savetop" data-options="region:'north'" border="false" style="height: 40px;overflow: hidden;">
+                <div style="margin-top: 10px;">
+                    
+                    
+                    <a href="javascript:void(0)" class="easyui-linkbutton" style="
+                            width: 60px;height: 23px;float: right ;margin-right: 5px; " onclick="outsubmit();">添加用户</a>
+                   
+                    <label for="orgname" style="margin: 5px 3px 0 0;">选择单位:</label>
+                      <input class="easyui-combobox" id="orgsearch" name="orgsearch" editable="false" style="width: 250px"
+                             value="">
+                             
+                            
+                </div>
+            </div>
+            <div id="savecontent" data-options="region:'center',border: false" style="overflow-x: hidden;">
+                <div id="dg" style="width:100%;height: 100%;" >
+                </div>
+            </div>
+        </div>
+        <div id="dlg" class="easyui-dialog" title="添加用户" closed="true"  data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'icon-ok',
+                    handler:function(){
+                        submit();
+                        $('#dlg').dialog('close');
+                    }
+                },{
+                    text:'取消',
+                    handler:function(){
+                        $('#showdg').datagrid('reload');
+                        
+                        
+                        
+                        $('#dlg').dialog('close');
+                    }
+                }]" style="width:700px;height:600px;padding:10px">
+                
+                
+                <div id="alertdlg" class="easyui-dialog" title="备品备件管理系统" data-options="buttons: [{
+                    text:'确定',
+                    iconCls:'',
+                    handler:function(){
+                        $('#alertdlg').dialog('close');
+                    }
+                }]" style="width:200px;height:150px;padding:10px">
+                </div>
+            <div id="showdg" style="height: 100%;"></div>
+            
+        </div>
+    </div>
+{% endblock %}
