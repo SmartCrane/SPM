@@ -199,7 +199,7 @@ def outsp(request):
         password = settings.DATABASES['default']['PASSWORD']
         host = settings.DATABASES['default']['HOST']
         name = settings.DATABASES['default']['NAME']
-        db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+        db = cx_Oracle.connect(username, password, '%s' % name)
     except:
         return  HttpResponseServerError('数据库连接错误')
     cursor = db.cursor()
@@ -226,7 +226,8 @@ def insp(request):
         password = settings.DATABASES['default']['PASSWORD']
         host = settings.DATABASES['default']['HOST']
         name = settings.DATABASES['default']['NAME']
-        db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+        # db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+        db = cx_Oracle.connect(username, password, '%s' %name)
     except:
         return  HttpResponseServerError('数据库连接错误')
 #     cursor = db.cursor()
@@ -550,7 +551,7 @@ def insert_database(request):
             password = settings.DATABASES['default']['PASSWORD']
             host = settings.DATABASES['default']['HOST']
             name = settings.DATABASES['default']['NAME']
-            db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+            db = cx_Oracle.connect(username, password, '%s' % name)
         except:
             return  HttpResponseServerError('error')
         cursor = db.cursor()
@@ -727,7 +728,7 @@ def out_database(request):
             password = settings.DATABASES['default']['PASSWORD']
             host = settings.DATABASES['default']['HOST']
             name = settings.DATABASES['default']['NAME']
-            db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+            db = cx_Oracle.connect(username, password, '%s' % name)
         except:
             return  HttpResponseServerError('数据库连接错误')
         cursor = db.cursor()
@@ -793,7 +794,7 @@ def out_org(request):
             password = settings.DATABASES['default']['PASSWORD']
             host = settings.DATABASES['default']['HOST']
             name = settings.DATABASES['default']['NAME']
-            db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+            db = cx_Oracle.connect(username, password, '%s' % name)
         except:
             return  HttpResponseServerError('数据库连接错误')
        
@@ -852,7 +853,7 @@ def out_org_common(request):
             password = settings.DATABASES['default']['PASSWORD']
             host = settings.DATABASES['default']['HOST']
             name = settings.DATABASES['default']['NAME']
-            db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+            db = cx_Oracle.connect(username, password, '%s' % name)
         except:
             return  HttpResponseServerError('数据库连接错误')
        
@@ -934,7 +935,7 @@ def out_exa_user(request):
             password = settings.DATABASES['default']['PASSWORD']
             host = settings.DATABASES['default']['HOST']
             name = settings.DATABASES['default']['NAME']
-            db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+            db = cx_Oracle.connect(username, password, '%s' % name)
         except:
             return  HttpResponseServerError('数据库连接错误')
        
@@ -1292,13 +1293,15 @@ def Manage_User(request):
         password = settings.DATABASES['default']['PASSWORD']
         host = settings.DATABASES['default']['HOST']
         name = settings.DATABASES['default']['NAME']
-        db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+        db = cx_Oracle.connect(username, password, '%s' % name)
     except:
         return  HttpResponseServerError('数据库连接错误')
     cursor = db.cursor()
     spcodeSQL = "select in_out_record_gen('%s','%s','%s') from dual"%(userdeptid,"A","")
     cursor.execute(spcodeSQL)
     recordid = cursor.fetchall()[0][0]
+    hideleft = request.GET.get('hideleft')
+    hidetop = request.GET.get('hidetop')
     return render_to_response('spm/manage_user.html',locals(), context_instance=RequestContext(request))
     
 def Manage_Fac(request):
@@ -1321,13 +1324,15 @@ def Manage_Org(request):
         password = settings.DATABASES['default']['PASSWORD']
         host = settings.DATABASES['default']['HOST']
         name = settings.DATABASES['default']['NAME']
-        db = cx_Oracle.connect(username,password,'%s/%s'%(host,name))
+        db = cx_Oracle.connect(username, password, '%s' % name)
     except:
         return  HttpResponseServerError('数据库连接错误')
     cursor = db.cursor()
     spcodeSQL = "select in_out_record_gen('%s','%s','%s') from dual"%(userdeptid,"A","")
     cursor.execute(spcodeSQL)
     recordid = cursor.fetchall()[0][0]
+    hideleft = request.GET.get('hideleft')
+    hidetop = request.GET.get('hidetop')
     return render_to_response('spm/manage_org.html',locals(), context_instance=RequestContext(request))
     
 

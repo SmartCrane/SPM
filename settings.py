@@ -66,11 +66,9 @@ X_FRAME_OPTIONS = ''
 DATABASES = {
     'default': {
     'ENGINE':   'django.db.backends.oracle',
-    'NAME':     'ipipe',
+    'NAME':     '10.90.49.10:1521/ipmsgdcy',
     'USER':     'bj_db',
     'PASSWORD': 'bj_db',
-    'HOST': '10.90.12.169',
-    'PORT': '1521',
   }
 }
 
