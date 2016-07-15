@@ -44,12 +44,13 @@ def customlogin(request,template_name='registration/login.html',redirect_field_n
         urlstr= urlparse.urlparse(nextparms)
         urlparms = urlparse.parse_qs(urlstr.query,True)
         usercode = ""
+        print 'ss'
         if urlparms:
             print urlparms
             key = urlparms['key'][0]
             # --anning:change <get usercode from key>
-            print views.getDecode(key)['userId']
-            usercode = views.getDecode(key)['userId']
+            print str(eval(views.getDecode(key))['usercode'])
+            usercode = str(eval(views.getDecode(key))['usercode'])
             print  key
             # usercode = urlparms['usercode'][0]
 

@@ -30,7 +30,7 @@ from django.views.decorators.csrf import csrf_exempt
 import xlrd
 
 from SPM import settings
-from SPM.customauthentication import customlogin
+# from SPM.customauthentication import customlogin
 from SPM.models import TabBdataCommonOrg, TabBdataFacSpeciality, \
     TabBdataFacCategory, TabBdataFacSpInfo, Elementsreation, \
     TabBdataCommonPagesu, TabBdataFacInSp, TabBdataFacInSpInfo, \
@@ -43,7 +43,7 @@ from SPM.settings import GERDECODEURL
 
 def getDecode(encryptKey):
     #     API = getConfByXML("ipms.ZB.IPMSAPI",'GetDecode')
-    url = GERDECODEURL + "?key=" + encryptKey
+    url = GERDECODEURL + encryptKey
     req = urllib2.urlopen(url).read()
     print url, '', req
     # print "json.loads",json.loads(req)
@@ -54,7 +54,8 @@ def getDecode(encryptKey):
 
 def getUsercodeByKey(request):
     key = request.GET.get('key')
-    return getDecode(key)['userId']
+    # print eval(getDecode(key))['usercode']
+    return eval(getDecode(key))['usercode']
 
 
 # 判断当前用户和当前出入usercode是否相同，不相同则退出之前session重新登录，若用户不存在跳转登录页面
