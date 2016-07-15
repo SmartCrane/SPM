@@ -18,6 +18,7 @@ from django.views.decorators.csrf import csrf_protect
 
 from SPM import settings
 from SPM.models import CustomUser
+import views
 
 
 @csrf_protect
@@ -44,7 +45,14 @@ def customlogin(request,template_name='registration/login.html',redirect_field_n
         urlparms = urlparse.parse_qs(urlstr.query,True)
         usercode = ""
         if urlparms:
-            usercode = urlparms['usercode'][0]
+            print urlparms
+            key = urlparms['key'][0]
+            # --anning:change <get usercode from key>
+            print views.getDecode(key)['userId']
+            usercode = views.getDecode(key)['userId']
+            print  key
+            # usercode = urlparms['usercode'][0]
+
         #如果存在用户code
         if usercode:
             try:
@@ -60,7 +68,7 @@ def customlogin(request,template_name='registration/login.html',redirect_field_n
                     'site': current_site,
                     'site_name': current_site.name,
                 }
-                return HttpResponseRedirect('http://'+current_site+'/portal/')
+                return HttpResponseRedirect('http://'+current_site.domain+'/portal/')
             #如果用户存在则登录
             if user is not None:
                 if user.is_active:
@@ -78,4 +86,5 @@ def customlogin(request,template_name='registration/login.html',redirect_field_n
                 'site': current_site,
                 'site_name': current_site.name,
             }
-            return HttpResponseRedirect('http://'+current_site+'/portal/')
+            print  current_site.domain
+            return HttpResponseRedirect('http://'+current_site.domain+'/portal/')
