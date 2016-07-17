@@ -43,19 +43,26 @@ from SPM.settings import GERDECODEURL
 
 def getDecode(encryptKey):
     #     API = getConfByXML("ipms.ZB.IPMSAPI",'GetDecode')
-    url = GERDECODEURL + encryptKey
-    req = urllib2.urlopen(url).read()
-    print url, '', req
-    # print "json.loads",json.loads(req)
-    # print eval(req)
-    print "get decryptValue", req
-    return req
+    if encryptKey is None:
+        return None
+    else:
+        url = GERDECODEURL + encryptKey
+        req = urllib2.urlopen(url).read()
+        print url, '', req
+        # print "json.loads",json.loads(req)
+        # print eval(req)
+        print "get decryptValue", req
+        return req
 
 
 def getUsercodeByKey(request):
     key = request.GET.get('key')
     # print eval(getDecode(key))['usercode']
-    return eval(getDecode(key))['usercode']
+    if key is not None:
+        usercode = eval(getDecode(key))['usercode']
+        return usercode
+    else:
+        return False
 
 
 # 判断当前用户和当前出入usercode是否相同，不相同则退出之前session重新登录，若用户不存在跳转登录页面
