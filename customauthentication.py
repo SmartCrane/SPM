@@ -51,7 +51,7 @@ def customlogin(request,template_name='registration/login.html',redirect_field_n
             # --anning:change <get usercode from key>
             print str(eval(views.getDecode(key))['usercode'])
             usercode = str(eval(views.getDecode(key))['usercode'])
-            print  key
+            print  usercode
             # usercode = urlparms['usercode'][0]
 
         #如果存在用户code

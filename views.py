@@ -46,7 +46,7 @@ def getDecode(encryptKey):
     if encryptKey is None:
         return None
     else:
-        url = GERDECODEURL + encryptKey
+        url = GERDECODEURL + encryptKey + "&hidetop=true&hideleft=true"
         req = urllib2.urlopen(url).read()
         print url, '', req
         # print "json.loads",json.loads(req)
@@ -55,12 +55,15 @@ def getDecode(encryptKey):
         return req
 
 
-def getUsercodeByKey(request):
+def getParametersByKey(request):
     key = request.GET.get('key')
     # print eval(getDecode(key))['usercode']
     if key is not None:
-        usercode = eval(getDecode(key))['usercode']
-        return usercode
+        parameters =eval(getDecode(key))
+        usercode = parameters['usercode']
+        hidetop = parameters['hidetop']
+        hideleft = parameters['hideleft']
+        return {"usercode":usercode,"hidetop":hidetop,"hideleft":hideleft}
     else:
         return False
 
@@ -221,10 +224,9 @@ def err_log(request):
 #     return HttpResponse(ss)
 @login_required
 def outsp(request):
-    hideleft = request.GET.get('hideleft')
-    hidetop = request.GET.get('hidetop')
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -244,20 +246,22 @@ def outsp(request):
     spcodeSQL = "select in_out_record_gen('%s','%s','%s') from dual" % (userdeptid, "A", "")
     cursor.execute(spcodeSQL)
     recordid = cursor.fetchall()[0][0]
+    hideleft = getParametersByKey(request)['hideleft']
+    hidetop = getParametersByKey(request)['hidetop']
     return render_to_response('spm/outsp.html', locals(), context_instance=RequestContext(request))
 
 
 @login_required
 def insp(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
     except TabBdataCommonUser.DoesNotExist:
         return HttpResponseServerError('当前登录用户不存在')
-    hideleft = request.GET.get('hideleft')
-    hidetop = request.GET.get('hidetop')
+    hideleft = getParametersByKey(request)['hideleft']
+    hidetop = getParametersByKey(request)['hidetop']
     currentuserorg = ViewBdataCommonUserOrg.objects.filter(usercode=currentuser.usercode)
     userdeptid = ViewBdataCommonUserOrg.objects.filter(usercode=currentuser.usercode).order_by('orglevel').first().orgid
     try:
@@ -278,8 +282,8 @@ def insp(request):
 
 @login_required
 def SPM_Query(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -291,8 +295,8 @@ def SPM_Query(request):
         userquerytype = OrgQueryType.objects.get(orgid=userdepts.orgid).querytype
     except:
         userquerytype = ""
-    hideleft = request.GET.get('hideleft')
-    hidetop = request.GET.get('hidetop')
+    hideleft = getParametersByKey(request)['hideleft']
+    hidetop = getParametersByKey(request)['hidetop']
     deptelement = Elementsreation.objects.get(relationcode="E7");
     specialtyelement = Elementsreation.objects.get(relationcode="l0");
     categoryelement = Elementsreation.objects.get(relationcode="yw");
@@ -323,8 +327,8 @@ def SPM_Query(request):
 
 
 def ods_SPM_Query(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -369,8 +373,8 @@ def ods_SPM_Query(request):
 
 @login_required
 def SPM(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -382,8 +386,8 @@ def SPM(request):
         userquerytype = OrgQueryType.objects.get(orgid=userdepts.orgid).querytype
     except:
         userquerytype = ""
-    hideleft = request.GET.get('hideleft')
-    hidetop = request.GET.get('hidetop')
+    hideleft = getParametersByKey(request)['hideleft']
+    hidetop = getParametersByKey(request)['hidetop']
     deptelement = Elementsreation.objects.get(relationcode="E7");
     specialtyelement = Elementsreation.objects.get(relationcode="l0");
     categoryelement = Elementsreation.objects.get(relationcode="yw");
@@ -411,8 +415,8 @@ def SPM(request):
 
 @login_required
 def insp_query(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -424,8 +428,8 @@ def insp_query(request):
         userquerytype = OrgQueryType.objects.get(orgid=userdepts.orgid).querytype
     except:
         userquerytype = ""
-    hideleft = request.GET.get('hideleft')
-    hidetop = request.GET.get('hidetop')
+    hideleft = getParametersByKey(request)['hideleft']
+    hidetop = getParametersByKey(request)['hidetop']
     deptelement = Elementsreation.objects.get(relationcode="E7");
     specialtyelement = Elementsreation.objects.get(relationcode="l0");
     categoryelement = Elementsreation.objects.get(relationcode="yw");
@@ -1340,8 +1344,8 @@ def my_custom_error_view(request):
 
 @csrf_exempt
 def Manage_User(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
@@ -1375,8 +1379,8 @@ def Manage_Cat(request):
 
 
 def Manage_Org(request):
-    if getUsercodeByKey(request) and request.user:
-        if not comparesessionuser(getUsercodeByKey(request), request.user, request):
+    if getParametersByKey(request) and request.user:
+        if not comparesessionuser(getParametersByKey(request)['usercode'], request.user, request):
             return HttpResponseRedirect('/spm')
     try:
         currentuser = TabBdataCommonUser.objects.get(usercode=request.user.username)
